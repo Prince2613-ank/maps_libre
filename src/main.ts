@@ -7,6 +7,7 @@ import { setupDebugPanel } from "./debugPanel";
 import { setupInteraction } from "./interaction";
 import { ALT_2ND, ALT_3RD, LATITUDE, LONGITUDE } from "./placement";
 import { loadRooms, roomOverlayId, type RoomFloor } from "./rooms";
+import { NavigationUi } from "./navUi";
 
 const START_VIEW = { center: [LONGITUDE, LATITUDE] as [number, number], zoom: 19, pitch: 60, bearing: -20 };
 
@@ -75,6 +76,10 @@ async function setGroup(id: string, visible: boolean): Promise<void> {
   );
 }
 
+function isGroupVisible(id: string): boolean {
+  return checkboxes.get(id)?.checked ?? false;
+}
+
 function applyPreset(presetId: string): void {
   const preset = PRESETS.find((p) => p.id === presetId);
   if (!preset) return;
@@ -138,6 +143,7 @@ document.getElementById("rotate-right")!.addEventListener("click", () => rotateB
 autoButton.addEventListener("click", () => (autoFrame === null ? startAutoRotate() : stopAutoRotate()));
 document.getElementById("rotate-reset")!.addEventListener("click", () => {
   stopAutoRotate();
+  map.jumpTo({ elevation: 0 }); // navigation may have raised the camera centre to a floor's height
   map.easeTo({ ...START_VIEW, duration: 800 });
 });
 // Grabbing the map stops the auto spin so it doesn't fight the user.
@@ -147,7 +153,19 @@ setupDebugPanel(layer, document.getElementById("debug-toggle") as HTMLButtonElem
 
 map.on("load", () => {
   map.addLayer(layer);
-  setupInteraction(map, layer);
+  const navigation = new NavigationUi(map, layer, `${import.meta.env.BASE_URL}data/`, {
+    showFloor: (floor) => applyPreset(floor),
+    isFloorVisible: isGroupVisible,
+    ensureFloorLoaded: async (floor) => {
+      const main = GROUPS.find((g) => g.id === floor)?.models[0];
+      if (main) await layer.preload(main.file, main.altitude);
+    }
+  });
+  navigation.load().catch((error) => console.error("Failed to load navigation data", error));
+  setupInteraction(map, layer, {
+    canNavigate: (room, groupId) => navigation.canNavigate(room, groupId),
+    onDirections: (which, room, groupId) => navigation.setEndpoint(which, room, groupId)
+  });
   for (const rooms of ROOM_FLOORS) {
     loadRooms(layer, rooms, rooms.altitude)
       .then(() => layer.setOverlayVisible(roomOverlayId(rooms.groupId), rooms.altitude, checkboxes.get(rooms.groupId)?.checked ?? false))

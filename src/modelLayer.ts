@@ -211,11 +211,28 @@ export class ModelLayer implements CustomLayerInterface {
 
   private setMatrix(entry: ModelEntry): THREE.Matrix4 {
     const set = [...this.sets.values()].find((s) => s.files.has(entry.file));
-    if (!set) return new THREE.Matrix4();
+    return set ? this.adjustmentOf(set, entry.altitude) : new THREE.Matrix4();
+  }
+
+  private adjustmentOf(set: ModelSet, fallbackAltitude: number): THREE.Matrix4 {
     // Pivot = centre of the set's main model; until it has loaded, the point under the anchor at this height.
     const pivot = [...this.objects.values()].find((e) => e.file === set.pivotFile);
-    const center = pivot ? pivot.center.clone().setZ(pivot.center.z + pivot.altitude) : new THREE.Vector3(0, 0, entry.altitude);
+    const center = pivot ? pivot.center.clone().setZ(pivot.center.z + pivot.altitude) : new THREE.Vector3(0, 0, fallbackAltitude);
     return adjustmentMatrix(set.adjustment, center);
+  }
+
+  /**
+   * Current adjustment of a set as an ENU-metre matrix (identity for unknown sets), so other code can move
+   * its own geometry (e.g. a navigation route) exactly like that set's models. Load the set's pivot model first.
+   */
+  setTransform(id: string, fallbackAltitude = 0): THREE.Matrix4 {
+    const set = this.sets.get(id);
+    return set ? this.adjustmentOf(set, fallbackAltitude) : new THREE.Matrix4();
+  }
+
+  /** Load a model without showing it. */
+  async preload(file: string, altitude: number): Promise<void> {
+    await this.load(`${file}@${altitude}`, file, altitude);
   }
 
   private load(key: string, file: string, altitude: number): Promise<ModelEntry> {

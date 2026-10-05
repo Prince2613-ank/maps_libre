@@ -1,0 +1,68 @@
+{
+  "type": "FeatureCollection",
+  "name": "2nd_floor_door",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+  "xy_coordinate_resolution": 1e-15,
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "Floor": "2nd", "room_name": "Entrance", "Latitude": "28.67089482215200", "Longitude": "77.13369299801327" },
+      "geometry": { "type": "Point", "coordinates": [77.13369299801327, 28.670894822152] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "2nd", "room_name": "Admin", "Latitude": "28.67089008887495", "Longitude": "77.13366861432342" },
+      "geometry": { "type": "Point", "coordinates": [77.13366861432342, 28.67089008887495] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "2nd", "room_name": "Dojo", "Latitude": "28.67092944681110", "Longitude": "77.13366540177487" },
+      "geometry": { "type": "Point", "coordinates": [77.13366540177487, 28.6709294468111] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "2nd", "room_name": "Director", "Latitude": "28.67095426028975", "Longitude": "77.13369628484955" },
+      "geometry": { "type": "Point", "coordinates": [77.13369628484955, 28.67095426028975] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "2nd", "room_name": "Manthan", "Latitude": "28.67094925880298", "Longitude": "77.13370522156849" },
+      "geometry": { "type": "Point", "coordinates": [77.13370522156849, 28.67094925880298] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "2nd", "room_name": "Eureka", "Latitude": "28.67098951671396", "Longitude": "77.13368649275453" },
+      "geometry": { "type": "Point", "coordinates": [77.13368649275453, 28.67098951671396] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "2nd", "room_name": "UG's Cabin", "Latitude": "28.67100097148032", "Longitude": "77.13367439510367" },
+      "geometry": { "type": "Point", "coordinates": [77.13367439510367, 28.67100097148032] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "2nd", "room_name": "VG's Cabin", "Latitude": "28.67096311881750", "Longitude": "77.13362981197865" },
+      "geometry": { "type": "Point", "coordinates": [77.13362981197865, 28.6709631188175] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "2nd", "room_name": "Pantry", "Latitude": "28.67098751501402", "Longitude": "77.13361505798458" },
+      "geometry": { "type": "Point", "coordinates": [77.13361505798458, 28.67098751501402] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "2nd", "room_name": "Men Washroom", "Latitude": "28.67099246271987", "Longitude": "77.13362298925544" },
+      "geometry": { "type": "Point", "coordinates": [77.13362298925544, 28.67099246271987] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "2nd", "room_name": "Women Washroom", "Latitude": "28.67101673869098", "Longitude": "77.13365455987549" },
+      "geometry": { "type": "Point", "coordinates": [77.13365455987549, 28.67101673869098] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "2nd", "room_name": "Stairs", "Latitude": "28.67091077457918", "Longitude": "77.13370304794939" },
+      "geometry": { "type": "Point", "coordinates": [77.13370304794939, 28.67091077457918] }
+    }
+  ]
+}

@@ -7,6 +7,7 @@
   </head>
   <body>
     <div id="map"></div>
+    <div id="nav-hud" hidden></div>
     <div id="panel">
       <h1>Building models</h1>
       <div id="presets"></div>
@@ -18,6 +19,27 @@
         <button id="rotate-auto" title="Spin the view around the map centre">▶ Auto</button>
         <button id="rotate-reset" title="Back to the starting view">Reset</button>
       </div>
+      <details id="nav-section">
+        <summary>🧭 Navigation</summary>
+        <div class="nav-row">
+          <label for="nav-from">From</label>
+          <select id="nav-from"></select>
+        </div>
+        <div class="nav-row">
+          <label for="nav-to">To</label>
+          <select id="nav-to"></select>
+          <button id="nav-swap" title="Swap start and destination">⇅</button>
+        </div>
+        <div class="nav-actions">
+          <button id="nav-start" class="primary">▶ Start</button>
+          <button id="nav-pause" hidden>⏸ Pause</button>
+          <button id="nav-exit" hidden>✕ Exit</button>
+          <label class="nav-follow"><input type="checkbox" id="nav-follow" checked /> Follow</label>
+        </div>
+        <div id="nav-message"></div>
+        <div id="nav-summary" hidden></div>
+        <ol id="nav-steps"></ol>
+      </details>
       <div id="tools">
         <button id="debug-toggle" title="Move, rotate and scale each layer (or open with ?debug)">🛠 Debug</button>
       </div>

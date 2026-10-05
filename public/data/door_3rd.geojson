@@ -1,0 +1,43 @@
+{
+  "type": "FeatureCollection",
+  "name": "3rd_floor_door",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+  "xy_coordinate_resolution": 1e-15,
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "Floor": "3rd", "room_name": "Conference Room", "Latitude": "28.67094988101015", "Longitude": "77.13363876416800" },
+      "geometry": { "type": "Point", "coordinates": [77.133638764168, 28.67094988101015] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "3rd", "room_name": "Women Washroom", "Latitude": "28.67100052355134", "Longitude": "77.13362922745107" },
+      "geometry": { "type": "Point", "coordinates": [77.13362922745107, 28.67100052355134] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "3rd", "room_name": "Men Washroom", "Latitude": "28.67101546237399", "Longitude": "77.13365135034559" },
+      "geometry": { "type": "Point", "coordinates": [77.13365135034559, 28.67101546237399] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "3rd", "room_name": "Meeting Room", "Latitude": "28.67101321416699", "Longitude": "77.13366405005728" },
+      "geometry": { "type": "Point", "coordinates": [77.13366405005728, 28.67101321416699] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "3rd", "room_name": "Pantry", "Latitude": "28.67095703850098", "Longitude": "77.13371705946003" },
+      "geometry": { "type": "Point", "coordinates": [77.13371705946003, 28.67095703850098] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "3rd", "room_name": "Pantry", "Latitude": "28.67092052705272", "Longitude": "77.13372663090223" },
+      "geometry": { "type": "Point", "coordinates": [77.13372663090223, 28.67092052705272] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "Floor": "3rd", "room_name": "Entrance", "Latitude": "28.67089868786110", "Longitude": "77.13369341274869" },
+      "geometry": { "type": "Point", "coordinates": [77.13369341274869, 28.6708986878611] }
+    }
+  ]
+}

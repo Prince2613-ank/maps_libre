@@ -52,3 +52,21 @@ export function enuModelMatrix(): THREE.Matrix4 {
     .multiply(axisCorrection)
     .multiply(new THREE.Matrix4().makeScale(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE));
 }
+
+/** Lon/lat → local East-North metres around the anchor, on the WGS84 ellipsoid (same convention as Cesium). */
+export function lonLatToEnu(lon: number, lat: number): THREE.Vector2 {
+  const a = 6378137;
+  const { east, north } = ellipsoidCorrection();
+  return new THREE.Vector2(
+    deg(lon - LONGITUDE) * (a / east) * Math.cos(deg(LATITUDE)),
+    deg(lat - LATITUDE) * (a / north)
+  );
+}
+
+/** Inverse of lonLatToEnu. */
+export function enuToLonLat(east: number, north: number): [number, number] {
+  const a = 6378137;
+  const k = ellipsoidCorrection();
+  const rad = THREE.MathUtils.radToDeg;
+  return [LONGITUDE + rad(east / ((a / k.east) * Math.cos(deg(LATITUDE)))), LATITUDE + rad(north / (a / k.north))];
+}

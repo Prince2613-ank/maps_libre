@@ -27,7 +27,7 @@ function chairPopupHtml(file: string): string {
     </table>`;
 }
 
-function roomPopupHtml(mesh: THREE.Object3D): string {
+function roomPopupHtml(mesh: THREE.Object3D, directions: boolean): string {
   const room = roomOf.get(mesh)!;
   const rows = [
     room.roomId ? `<tr><th>Room ID</th><td>${escapeHtml(room.roomId)}</td></tr>` : "",
@@ -38,7 +38,8 @@ function roomPopupHtml(mesh: THREE.Object3D): string {
   return `
     <div class="popup-title">🚪 ${escapeHtml(room.name)}</div>
     <table>${rows}</table>
-    ${room.bookable ? `<div class="popup-note">Bookable meeting room</div>` : ""}`;
+    ${room.bookable ? `<div class="popup-note">Bookable meeting room</div>` : ""}
+    ${directions ? `<div class="popup-actions"><button data-directions="from">Directions from here</button><button data-directions="to">Directions to here</button></div>` : ""}`;
 }
 
 /** Tint every material of a chair model (or restore it). Each GLB has its own materials, so this is per chair. */
@@ -61,7 +62,13 @@ function modelRoot(object: THREE.Object3D): THREE.Object3D {
   return node;
 }
 
-export function setupInteraction(map: maplibregl.Map, layer: ModelLayer): void {
+export type InteractionOptions = {
+  /** Room popups offer "Directions from/to here" when this returns true for the room. */
+  canNavigate?: (roomName: string, groupId: string) => boolean;
+  onDirections?: (which: "from" | "to", roomName: string, groupId: string) => void;
+};
+
+export function setupInteraction(map: maplibregl.Map, layer: ModelLayer, options: InteractionOptions = {}): void {
   const container = map.getContainer();
 
   // --- Popup glued to a 3D point
@@ -96,6 +103,14 @@ export function setupInteraction(map: maplibregl.Map, layer: ModelLayer): void {
     popupPoint = null;
   };
   close.addEventListener("click", closePopup);
+  let popupRoom: { name: string; groupId: string } | null = null;
+  popupBody.addEventListener("click", (event) => {
+    const which = (event.target as HTMLElement).closest<HTMLElement>("[data-directions]")?.dataset.directions;
+    if ((which === "from" || which === "to") && popupRoom) {
+      options.onDirections?.(which, popupRoom.name, popupRoom.groupId);
+      closePopup();
+    }
+  });
   window.addEventListener("keydown", (e) => e.key === "Escape" && closePopup());
 
   // --- Hover tooltip (follows the cursor)
@@ -162,6 +177,9 @@ export function setupInteraction(map: maplibregl.Map, layer: ModelLayer): void {
       return;
     }
     tooltip.hidden = true;
-    openPopup(roomOf.has(hit.object) ? roomPopupHtml(hit.object) : chairPopupHtml(hit.file), hit.point);
+    const room = roomOf.get(hit.object);
+    popupRoom = room ? { name: room.name, groupId: room.groupId } : null;
+    const directions = Boolean(room && options.onDirections && options.canNavigate?.(room.name, room.groupId));
+    openPopup(room ? roomPopupHtml(hit.object, directions) : chairPopupHtml(hit.file), hit.point);
   });
 }
