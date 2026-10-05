@@ -1,0 +1,25 @@
+{
+  "third": {
+    "east": -1.6,
+    "up": 2.3
+  },
+  "second": {
+    "east": -2.1,
+    "north": 0.2,
+    "up": 1.2,
+    "yaw": 5,
+    "pitch": -1
+  },
+  "building": {
+    "up": 3.2,
+    "yaw": 9,
+    "scale": 1.07
+  },
+  "ground": {
+    "east": -2.6
+  },
+  "first": {
+    "east": -2,
+    "up": 0.4
+  }
+}

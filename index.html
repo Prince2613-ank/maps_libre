@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MapLibre Indoor</title>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="panel">
+      <h1>Building models</h1>
+      <div id="presets"></div>
+      <div id="groups"></div>
+      <div id="rotation">
+        <span>Rotate</span>
+        <button id="rotate-left" title="Rotate left 45°">⟲ 45°</button>
+        <button id="rotate-right" title="Rotate right 45°">⟳ 45°</button>
+        <button id="rotate-auto" title="Spin the view around the map centre">▶ Auto</button>
+        <button id="rotate-reset" title="Back to the starting view">Reset</button>
+      </div>
+      <div id="tools">
+        <button id="debug-toggle" title="Move, rotate and scale each layer (or open with ?debug)">🛠 Debug</button>
+      </div>
+      <div id="status"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
