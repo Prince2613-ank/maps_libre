@@ -14,7 +14,7 @@ const at = (altitude: number, files: string[]): ModelRef[] => files.map((file) =
 // Same files and altitudes the Cesium project loads (cesium_demo/src/models.ts, chairs.ts).
 // Each floor layer includes that floor's cameras and chairs.
 export const GROUPS: ModelGroup[] = [
-  { id: "building", label: "Building exterior", models: at(BASE_ALT, ["full_building.glb"]) },
+  { id: "building", label: "Building exterior", models: at(BASE_ALT, ["Building_model.glb"]) },
   { id: "ground", label: "Ground floor", models: at(ALT_GROUND, ["ground_floor_final.glb"]) },
   { id: "first", label: "1st floor", models: at(ALT_1ST, ["1st_floor_up_final.glb"]) },
   {
@@ -42,13 +42,15 @@ export const GROUPS: ModelGroup[] = [
   }
 ];
 
-export type Preset = { id: string; label: string; groups: string[] };
+/** `short` is the floor switcher's button text; "building" shows an icon instead. */
+export type Preset = { id: string; label: string; short: string; groups: string[] };
 
+// Bottom (outside) to top, as the floor switcher stacks them.
 export const PRESETS: Preset[] = [
-  { id: "building", label: "Building", groups: ["building"] },
-  { id: "ground", label: "Ground", groups: ["ground"] },
-  { id: "first", label: "1st", groups: ["first"] },
-  { id: "second", label: "2nd", groups: ["second"] },
-  { id: "third", label: "3rd", groups: ["third"] },
-  { id: "all", label: "All floors", groups: ["ground", "first", "second", "third"] }
+  { id: "building", label: "Building exterior", short: "", groups: ["building"] },
+  { id: "ground", label: "Ground floor", short: "G", groups: ["ground"] },
+  { id: "first", label: "1st floor", short: "1", groups: ["first"] },
+  { id: "second", label: "2nd floor", short: "2", groups: ["second"] },
+  { id: "third", label: "3rd floor", short: "3", groups: ["third"] },
+  { id: "all", label: "All floors", short: "All", groups: ["ground", "first", "second", "third"] }
 ];

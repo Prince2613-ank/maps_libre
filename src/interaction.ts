@@ -27,18 +27,23 @@ function chairPopupHtml(file: string): string {
     </table>`;
 }
 
-function roomPopupHtml(mesh: THREE.Object3D, directions: boolean): string {
+/** Booking status line for a bookable room (null when unknown, e.g. signed out). */
+export type RoomBookingStatus = { busy: boolean; label: string } | null;
+
+function roomPopupHtml(mesh: THREE.Object3D, directions: boolean, booking: { status: RoomBookingStatus } | null): string {
   const room = roomOf.get(mesh)!;
+  const status = booking?.status;
   const rows = [
     room.roomId ? `<tr><th>Room ID</th><td>${escapeHtml(room.roomId)}</td></tr>` : "",
     `<tr><th>Floor</th><td>${room.floorLabel}</td></tr>`,
     room.type ? `<tr><th>Type</th><td>${escapeHtml(room.type)}</td></tr>` : "",
-    room.bookable ? `<tr><th>Status</th><td><span class="status available">Available</span></td></tr>` : ""
+    status ? `<tr><th>Status</th><td><span class="status ${status.busy ? "occupied" : "available"}">${escapeHtml(status.label)}</span></td></tr>` : ""
   ].join("");
   return `
     <div class="popup-title">🚪 ${escapeHtml(room.name)}</div>
     <table>${rows}</table>
-    ${room.bookable ? `<div class="popup-note">Bookable meeting room</div>` : ""}
+    ${booking ? `<div class="popup-note">Bookable meeting room${status ? "" : " · sign in to see bookings"}</div>` : ""}
+    ${booking ? `<div class="popup-actions"><button data-book>📅 Book this room</button></div>` : ""}
     ${directions ? `<div class="popup-actions"><button data-directions="from">Directions from here</button><button data-directions="to">Directions to here</button></div>` : ""}`;
 }
 
@@ -66,6 +71,9 @@ export type InteractionOptions = {
   /** Room popups offer "Directions from/to here" when this returns true for the room. */
   canNavigate?: (roomName: string, groupId: string) => boolean;
   onDirections?: (which: "from" | "to", roomName: string, groupId: string) => void;
+  /** Bookable rooms: live status for the popup, or undefined if the room can't be booked. */
+  bookingStatus?: (roomName: string) => RoomBookingStatus | undefined;
+  onBook?: (roomName: string, groupId: string) => void;
 };
 
 export function setupInteraction(map: maplibregl.Map, layer: ModelLayer, options: InteractionOptions = {}): void {
@@ -88,7 +96,11 @@ export function setupInteraction(map: maplibregl.Map, layer: ModelLayer, options
     if (!popupPoint) return;
     const screen = layer.projectToScreen(popupPoint);
     popup.style.visibility = screen ? "visible" : "hidden";
-    if (screen) popup.style.transform = `translate(${screen.x}px, ${screen.y}px) translate(-50%, calc(-100% - 12px))`;
+    if (!screen) return;
+    // Open below the point when there isn't room above it.
+    const below = screen.y - popup.offsetHeight - 12 < 0;
+    popup.classList.toggle("below", below);
+    popup.style.transform = `translate(${screen.x}px, ${screen.y}px) translate(-50%, ${below ? "12px" : "calc(-100% - 12px)"})`;
   };
   layer.onAfterRender(placePopup);
 
@@ -105,6 +117,11 @@ export function setupInteraction(map: maplibregl.Map, layer: ModelLayer, options
   close.addEventListener("click", closePopup);
   let popupRoom: { name: string; groupId: string } | null = null;
   popupBody.addEventListener("click", (event) => {
+    if ((event.target as HTMLElement).closest("[data-book]") && popupRoom) {
+      options.onBook?.(popupRoom.name, popupRoom.groupId);
+      closePopup();
+      return;
+    }
     const which = (event.target as HTMLElement).closest<HTMLElement>("[data-directions]")?.dataset.directions;
     if ((which === "from" || which === "to") && popupRoom) {
       options.onDirections?.(which, popupRoom.name, popupRoom.groupId);
@@ -180,6 +197,8 @@ export function setupInteraction(map: maplibregl.Map, layer: ModelLayer, options
     const room = roomOf.get(hit.object);
     popupRoom = room ? { name: room.name, groupId: room.groupId } : null;
     const directions = Boolean(room && options.onDirections && options.canNavigate?.(room.name, room.groupId));
-    openPopup(room ? roomPopupHtml(hit.object, directions) : chairPopupHtml(hit.file), hit.point);
+    const status = room && options.onBook ? options.bookingStatus?.(room.name) : undefined;
+    const booking = status === undefined ? null : { status };
+    openPopup(room ? roomPopupHtml(hit.object, directions, booking) : chairPopupHtml(hit.file), hit.point);
   });
 }

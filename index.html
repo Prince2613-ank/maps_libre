@@ -4,47 +4,146 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MapLibre Indoor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="map"></div>
     <div id="nav-hud" hidden></div>
-    <div id="panel">
-      <h1>Building models</h1>
-      <div id="presets"></div>
-      <div id="groups"></div>
-      <div id="rotation">
-        <span>Rotate</span>
-        <button id="rotate-left" title="Rotate left 45°">⟲ 45°</button>
-        <button id="rotate-right" title="Rotate right 45°">⟳ 45°</button>
-        <button id="rotate-auto" title="Spin the view around the map centre">▶ Auto</button>
-        <button id="rotate-reset" title="Back to the starting view">Reset</button>
-      </div>
-      <details id="nav-section">
-        <summary>🧭 Navigation</summary>
-        <div class="nav-row">
-          <label for="nav-from">From</label>
-          <select id="nav-from"></select>
-        </div>
-        <div class="nav-row">
-          <label for="nav-to">To</label>
-          <select id="nav-to"></select>
-          <button id="nav-swap" title="Swap start and destination">⇅</button>
-        </div>
-        <div class="nav-actions">
-          <button id="nav-start" class="primary">▶ Start</button>
-          <button id="nav-pause" hidden>⏸ Pause</button>
-          <button id="nav-exit" hidden>✕ Exit</button>
-          <label class="nav-follow"><input type="checkbox" id="nav-follow" checked /> Follow</label>
-        </div>
-        <div id="nav-message"></div>
-        <div id="nav-summary" hidden></div>
-        <ol id="nav-steps"></ol>
-      </details>
-      <div id="tools">
-        <button id="debug-toggle" title="Move, rotate and scale each layer (or open with ?debug)">🛠 Debug</button>
-      </div>
-      <div id="status"></div>
+    <div id="toasts"></div>
+
+    <!-- Map controls; main.ts mounts these in MapLibre's top-right control column. -->
+    <div id="view-ctrl" class="maplibregl-ctrl maplibregl-ctrl-group view-ctrl">
+      <button id="rotate-left" type="button" title="Rotate left 45°" aria-label="Rotate left 45°"><span data-icon="rotate-ccw"></span></button>
+      <button id="rotate-right" type="button" title="Rotate right 45°" aria-label="Rotate right 45°"><span data-icon="rotate-cw"></span></button>
+      <button id="rotate-auto" type="button" title="Spin the view around the map centre" aria-label="Spin the view" aria-pressed="false"><span data-icon="play"></span></button>
+      <button id="rotate-reset" type="button" title="Back to the starting view" aria-label="Back to the starting view"><span data-icon="home"></span></button>
     </div>
+    <div id="floor-ctrl" class="maplibregl-ctrl floor-ctrl" role="group" aria-label="Floor">
+      <div class="floor-ctrl-title">Floor</div>
+      <div id="presets"></div>
+    </div>
+
+    <aside id="panel">
+      <header class="panel-header">
+        <div class="brand-mark"><span data-icon="building"></span></div>
+        <div class="brand-text">
+          <h1>Indoor Viewer</h1>
+          <p id="status" role="status"></p>
+          <p id="view-label"></p>
+        </div>
+        <button id="debug-toggle" class="icon-btn" type="button" title="Move, rotate and scale each layer (or open with ?debug)" aria-label="Debug: adjust layers"><span data-icon="wrench"></span></button>
+        <button id="panel-collapse" class="icon-btn collapse-btn" type="button" title="Collapse panel" aria-expanded="true"><span data-icon="chevron"></span></button>
+      </header>
+
+      <nav class="tabs" role="tablist" aria-label="Panel sections">
+        <button class="tab" type="button" role="tab" data-tab="layers-section"><span data-icon="layers"></span><span>Layers</span></button>
+        <button class="tab" type="button" role="tab" data-tab="nav-section"><span data-icon="route"></span><span>Directions</span></button>
+        <button class="tab" type="button" role="tab" data-tab="booking-section"><span data-icon="calendar"></span><span>Booking</span></button>
+        <button class="tab" type="button" role="tab" data-tab="sun-section"><span data-icon="sun"></span><span>Sun</span></button>
+      </nav>
+
+      <div class="panel-body">
+        <details id="layers-section" class="tab-panel" role="tabpanel">
+          <summary>Layers</summary>
+          <h2 class="section-title">3D models</h2>
+          <div id="groups" class="card-list"></div>
+          <p class="hint">Use the floor switcher on the right to jump between floors, or combine layers here.</p>
+        </details>
+
+        <details id="nav-section" class="tab-panel" role="tabpanel">
+          <summary>Directions</summary>
+          <div class="route-card">
+            <div class="route-rail" aria-hidden="true"><span class="rail-from"></span><span class="rail-line"></span><span class="rail-to" data-icon="pin"></span></div>
+            <div class="route-fields">
+              <label class="field"><span>From</span><select id="nav-from"></select></label>
+              <label class="field"><span>To</span><select id="nav-to"></select></label>
+            </div>
+            <button id="nav-swap" class="icon-btn" type="button" title="Swap start and destination" aria-label="Swap start and destination"><span data-icon="swap"></span></button>
+          </div>
+          <div class="nav-actions">
+            <button id="nav-start" class="btn primary" type="button"><span data-icon="navigation"></span> Start</button>
+            <button id="nav-pause" class="btn" type="button" hidden>⏸ Pause</button>
+            <button id="nav-exit" class="btn" type="button" hidden>Exit</button>
+            <label class="switch-label nav-follow"><input type="checkbox" id="nav-follow" class="switch" checked /> Follow</label>
+          </div>
+          <div id="nav-message" class="hint"></div>
+          <div id="nav-summary" hidden></div>
+          <ol id="nav-steps"></ol>
+        </details>
+
+        <details id="booking-section" class="tab-panel" role="tabpanel">
+          <summary>Booking</summary>
+          <div id="booking-account"></div>
+          <h2 class="section-title">Meeting rooms</h2>
+          <div id="booking-rooms" class="card-list"></div>
+          <div id="booking-message"></div>
+        </details>
+
+        <details id="sun-section" class="tab-panel" role="tabpanel">
+          <summary>Sun &amp; shadows</summary>
+          <label class="switch-row">
+            <span><b>Real sunlight</b><small>Light the scene from the sun's position</small></span>
+            <input type="checkbox" id="sun-enabled" class="switch" checked />
+          </label>
+          <div id="sun-controls">
+            <div class="sun-clock">
+              <div class="sun-time"><b id="sun-time-label">--:--</b><span id="sun-tz"></span></div>
+              <div class="sun-date">
+                <input type="date" id="sun-date" aria-label="Date" />
+                <button id="sun-now" class="btn" type="button" title="Current date and time"><span data-icon="clock"></span> Now</button>
+              </div>
+            </div>
+            <div class="sun-slider">
+              <button id="sun-play" class="play-btn" type="button" title="Play the day">▶</button>
+              <input type="range" id="sun-time" min="0" max="1439" step="1" aria-label="Time of day" />
+            </div>
+            <div class="sun-quick">
+              <div class="segmented">
+                <button id="sun-sunrise" type="button"><span data-icon="sunrise"></span> Sunrise</button>
+                <button id="sun-noon" type="button"><span data-icon="sun"></span> Noon</button>
+                <button id="sun-sunset" type="button"><span data-icon="sunset"></span> Sunset</button>
+              </div>
+              <select id="sun-speed" title="Day animation speed" aria-label="Day animation speed"></select>
+            </div>
+            <div class="chips">
+              <label class="chip"><input type="checkbox" id="sun-shadows" checked /> Shadows</label>
+              <label class="chip"><input type="checkbox" id="sun-path" checked /> Sun path</label>
+              <label class="chip"><input type="checkbox" id="sun-tint" checked /> Day / night map</label>
+            </div>
+            <div id="sun-readout"></div>
+          </div>
+        </details>
+      </div>
+    </aside>
+
+    <section id="booking-card" hidden>
+      <header>
+        <h2 id="booking-card-title"></h2>
+        <button id="booking-card-show" class="icon-btn" type="button" title="Show this room on the map" aria-label="Show this room on the map"><span data-icon="pin"></span></button>
+        <button id="booking-card-close" class="icon-btn" type="button" title="Close" aria-label="Close"><span data-icon="close"></span></button>
+      </header>
+      <div id="booking-card-meta"></div>
+      <h3>Today</h3>
+      <div id="booking-card-list"></div>
+      <form id="booking-form">
+        <h3>New booking</h3>
+        <input id="booking-title" type="text" placeholder="Meeting title (optional)" maxlength="120" />
+        <div class="booking-times">
+          <label>Start <input id="booking-start" type="time" required /></label>
+          <label>End <input id="booking-end" type="time" required /></label>
+        </div>
+        <div class="segmented booking-durations">
+          <button type="button" data-duration="30">30 min</button>
+          <button type="button" data-duration="60">1 h</button>
+          <button type="button" data-duration="120">2 h</button>
+        </div>
+        <button id="booking-submit" type="submit" class="btn primary">Book room</button>
+        <div id="booking-card-message"></div>
+      </form>
+    </section>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

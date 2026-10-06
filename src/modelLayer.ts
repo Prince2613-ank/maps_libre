@@ -17,6 +17,28 @@ type ModelEntry = {
   overlay?: boolean;
 };
 
+/** Sun & sky lighting for the models (see setLighting). */
+export type Lighting = {
+  /** Unit vector pointing from the building towards the sun, in local East-North-Up. */
+  sunDirection: THREE.Vector3;
+  sunColor: THREE.Color;
+  sunIntensity: number;
+  ambientColor: THREE.Color;
+  ambientIntensity: number;
+  skyColor: THREE.Color;
+  groundColor: THREE.Color;
+  hemiIntensity: number;
+  /** Cast shadows from the sun onto the models and the ground. */
+  shadows: boolean;
+  /** Darkness of shadows on the ground (0..1). */
+  groundShadowOpacity: number;
+};
+
+/** Half-size (m) of the square area around the building where sun shadows are computed. */
+const SHADOW_EXTENT = 70;
+const SHADOW_MAP_SIZE = 4096;
+const SUN_DISTANCE = 300;
+
 /** Result of a click/hover pick: which model or overlay was hit, the exact mesh, and where (three.js world space). */
 export type PickHit = { file: string; object: THREE.Object3D; point: THREE.Vector3 };
 
@@ -51,6 +73,12 @@ export class ModelLayer implements CustomLayerInterface {
   private highlighted = new Set<string>();
   private readonly mercatorAnchor: maplibregl.MercatorCoordinate;
   private readonly afterRender = new Set<() => void>();
+  private readonly ambient = new THREE.AmbientLight(0xffffff, 1.4);
+  private readonly hemi = new THREE.HemisphereLight(0xffffff, 0x666666, 1.2);
+  private readonly sun = new THREE.DirectionalLight(0xffffff, 1.6);
+  /** Invisible ground plane that only shows the shadows falling on the map. */
+  private readonly groundShadow: THREE.Mesh;
+  private shadowsDirty = true;
 
   constructor(id: string, private readonly baseUrl: string) {
     this.id = id;
@@ -63,19 +91,60 @@ export class ModelLayer implements CustomLayerInterface {
     const draco = new DRACOLoader().setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.7/");
     this.loader = new GLTFLoader().setDRACOLoader(draco).setMeshoptDecoder(MeshoptDecoder);
 
-    this.scene.add(new THREE.AmbientLight(0xffffff, 1.4));
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x666666, 1.2);
-    hemi.position.set(0, 0, 1);
-    this.scene.add(hemi);
-    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-    sun.position.set(0.5, -0.8, 1.5);
-    this.scene.add(sun);
+    this.scene.add(this.ambient);
+    this.hemi.position.set(0, 0, 1);
+    this.scene.add(this.hemi);
+    // three.js world = east, south (mercator y), up — the sun sits SUN_DISTANCE m away, aimed at the anchor.
+    this.sun.position.set(0.5, -0.8, 1.5).setLength(SUN_DISTANCE);
+    this.sun.target.position.set(0, 0, 0);
+    const cam = this.sun.shadow.camera;
+    cam.left = cam.bottom = -SHADOW_EXTENT;
+    cam.right = cam.top = SHADOW_EXTENT;
+    cam.near = 1;
+    cam.far = SUN_DISTANCE * 2;
+    this.sun.shadow.mapSize.set(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+    this.sun.shadow.bias = -0.0004;
+    this.sun.shadow.normalBias = 0.04;
+    this.scene.add(this.sun, this.sun.target);
+
+    this.groundShadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(SHADOW_EXTENT * 2, SHADOW_EXTENT * 2),
+      // Double-sided: three.js world here has y flipped (mercator south), which reverses this plane's winding.
+      new THREE.ShadowMaterial({ opacity: 0.35, depthWrite: false, side: THREE.DoubleSide })
+    );
+    this.groundShadow.receiveShadow = true;
+    this.groundShadow.frustumCulled = false;
+    this.groundShadow.visible = false;
+    this.scene.add(this.groundShadow);
+  }
+
+  /** Sun direction/colour, sky light and shadows (driven by the Sun panel). */
+  setLighting(l: Lighting): void {
+    // ENU → three.js world (y flipped to mercator south).
+    this.sun.position.set(l.sunDirection.x, -l.sunDirection.y, l.sunDirection.z).normalize().multiplyScalar(SUN_DISTANCE);
+    this.sun.color.copy(l.sunColor);
+    this.sun.intensity = l.sunIntensity;
+    this.ambient.color.copy(l.ambientColor);
+    this.ambient.intensity = l.ambientIntensity;
+    this.hemi.color.copy(l.skyColor);
+    this.hemi.groundColor.copy(l.groundColor);
+    this.hemi.intensity = l.hemiIntensity;
+    const castShadows = l.shadows && l.sunIntensity > 0.01;
+    this.sun.castShadow = castShadows;
+    this.groundShadow.visible = castShadows;
+    (this.groundShadow.material as THREE.ShadowMaterial).opacity = l.groundShadowOpacity;
+    this.shadowsDirty = true;
+    this.map?.triggerRepaint();
   }
 
   onAdd(map: maplibregl.Map, gl: WebGL2RenderingContext): void {
     this.map = map;
     this.renderer = new THREE.WebGLRenderer({ canvas: map.getCanvas(), context: gl, antialias: true });
     this.renderer.autoClear = false;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // The shadow map only depends on the sun and the models, not the camera: re-render it only when they change.
+    this.renderer.shadowMap.autoUpdate = false;
   }
 
   /** Load (once) and show/hide a model. Resolves when the model is in the scene. */
@@ -84,11 +153,13 @@ export class ModelLayer implements CustomLayerInterface {
     if (!visible) {
       const entry = this.objects.get(key);
       if (entry) entry.root.visible = false;
+      this.shadowsDirty = true;
       this.map?.triggerRepaint();
       return;
     }
     const entry = await this.load(key, file, altitude);
     entry.root.visible = true;
+    this.shadowsDirty = true;
     this.map?.triggerRepaint();
   }
 
@@ -107,6 +178,7 @@ export class ModelLayer implements CustomLayerInterface {
     if (!set) return;
     set.adjustment = adjustment;
     for (const entry of this.objects.values()) if (set.files.has(entry.file)) this.updateMatrix(entry);
+    this.shadowsDirty = true;
     this.map?.triggerRepaint();
   }
 
@@ -254,6 +326,7 @@ export class ModelLayer implements CustomLayerInterface {
       root.add(gltf.scene, box);
       root.traverse((child) => {
         child.frustumCulled = false; // projection is MapLibre's, three's culling can't trust it
+        if ((child as THREE.Mesh).isMesh) child.castShadow = child.receiveShadow = true;
       });
       root.visible = false;
       const center = bounds.getCenter(new THREE.Vector3()).applyMatrix4(this.enuModel);
@@ -274,11 +347,17 @@ export class ModelLayer implements CustomLayerInterface {
     return promise;
   }
 
-  render(_gl: WebGL2RenderingContext, options: CustomRenderMethodInput): void {
+  render(gl: WebGL2RenderingContext, options: CustomRenderMethodInput): void {
     const main = new THREE.Matrix4().fromArray(options.defaultProjectionData.mainMatrix as unknown as number[]);
     this.camera.projectionMatrix = main.multiply(this.anchor);
     this.camera.projectionMatrixInverse.copy(this.camera.projectionMatrix).invert();
     this.renderer.resetState();
+    // three.js restores this viewport after drawing the shadow map; keep it in sync with the map canvas.
+    this.renderer.setViewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    if (this.shadowsDirty && this.sun.castShadow) {
+      this.renderer.shadowMap.needsUpdate = true;
+      this.shadowsDirty = false;
+    }
     this.renderer.render(this.scene, this.camera);
     for (const callback of this.afterRender) callback();
   }

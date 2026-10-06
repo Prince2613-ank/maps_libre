@@ -4,6 +4,7 @@ import type { ModelLayer } from "./modelLayer";
 import { NAV_FLOORS, Navigator, samplePath, thirdFloorWeight, type FloorId, type NavRoute, type RoomChoice } from "./navigation";
 import { enuToLonLat } from "./placement";
 import { RouteOverlay } from "./routeOverlay";
+import { showSection } from "./panel";
 
 // Navigation panel + live walk, following the Cesium app (cesium_demo/src/navigation.ts startNavigation,
 // startLiveNavigationMarker, liveNavigationHudState, finishLiveNavigation).
@@ -130,10 +131,21 @@ export class NavigationUi {
     if (!room) return;
     (which === "from" ? this.from : this.to).value = room.label;
     this.updateButtons();
-    const section = $<HTMLDetailsElement>("nav-section");
-    section.open = true;
-    section.scrollIntoView({ block: "nearest" });
+    showSection("nav-section");
     this.setMessage(this.from.value && this.to.value ? "Press Start to navigate." : `Now choose the ${which === "from" ? "destination" : "start"}.`);
+  }
+
+  /** Show a room's floor and fly the camera to the room. */
+  async focusRoom(roomName: string, floor: string): Promise<void> {
+    const room = this.navigator.findRoom(roomName, floor as FloorId);
+    const center = room && this.navigator.roomCenter(room);
+    if (!room || !center) return;
+    this.hooks.showFloor(room.floor);
+    await this.hooks.ensureFloorLoaded(room.floor).catch(() => undefined);
+    const p = this.adjust(center);
+    this.map.setCenterClampedToGround(false);
+    this.map.jumpTo({ elevation: p.z });
+    this.map.easeTo({ center: enuToLonLat(p.x, p.y), zoom: 20.8, pitch: 50, duration: 1000 });
   }
 
   private choice(select: HTMLSelectElement): RoomChoice | undefined {

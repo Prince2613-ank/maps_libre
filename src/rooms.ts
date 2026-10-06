@@ -48,10 +48,38 @@ function polygonsOf(geometry: { type: string; coordinates: unknown }): Ring[][] 
 /** Room mesh → its info (for popups); also how interaction code recognises a room hit. */
 export const roomOf = new WeakMap<THREE.Object3D, RoomInfo>();
 
+const roomMeshes: THREE.Mesh[] = [];
+const hovered = new WeakSet<THREE.Object3D>();
+
+/** Fill colour/opacity a room shows when not hovered (white, or its booking status colour). */
+function restingLook(mesh: THREE.Object3D): { color: THREE.ColorRepresentation; opacity: number } {
+  return mesh.userData.statusLook ?? { color: FILL, opacity: FILL_OPACITY };
+}
+
 export function highlightRoom(mesh: THREE.Object3D, on: boolean): void {
   const material = (mesh as THREE.Mesh).material as THREE.MeshBasicMaterial;
-  material.color.set(on ? HOVER_FILL : FILL);
-  material.opacity = on ? HOVER_OPACITY : FILL_OPACITY;
+  if (on) hovered.add(mesh);
+  else hovered.delete(mesh);
+  const look = on ? { color: HOVER_FILL, opacity: HOVER_OPACITY } : restingLook(mesh);
+  material.color.set(look.color);
+  material.opacity = look.opacity;
+}
+
+/**
+ * Tint rooms by booking status: `status(roomName)` returns "free", "busy" or null (no tint).
+ * Returns true if any room changed, so the caller can repaint.
+ */
+export function tintRooms(status: (roomName: string) => "free" | "busy" | null): boolean {
+  let changed = false;
+  for (const mesh of roomMeshes) {
+    const s = status(roomOf.get(mesh)!.name);
+    const look = s === "busy" ? { color: 0xef4444, opacity: 0.28 } : s === "free" ? { color: 0x22c55e, opacity: 0.2 } : undefined;
+    if (JSON.stringify(look) === JSON.stringify(mesh.userData.statusLook)) continue;
+    mesh.userData.statusLook = look;
+    if (!hovered.has(mesh)) highlightRoom(mesh, false);
+    changed = true;
+  }
+  return changed;
 }
 
 export async function loadRooms(layer: ModelLayer, floor: RoomFloor, altitude: number): Promise<void> {
@@ -84,6 +112,7 @@ export async function loadRooms(layer: ModelLayer, floor: RoomFloor, altitude: n
       );
       fill.position.z = LIFT_METRES;
       roomOf.set(fill, info);
+      roomMeshes.push(fill);
       group.add(fill);
 
       const outline = new THREE.LineLoop(

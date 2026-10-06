@@ -8,31 +8,36 @@ import { setupInteraction } from "./interaction";
 import { ALT_2ND, ALT_3RD, LATITUDE, LONGITUDE } from "./placement";
 import { loadRooms, roomOverlayId, type RoomFloor } from "./rooms";
 import { NavigationUi } from "./navUi";
+import { SolarUi } from "./solarUi";
+import { BookingUi } from "./bookingUi";
+import { tintRooms } from "./rooms";
+import { BasemapControl, initialStyle } from "./basemaps";
+import { hydrateIcons, icon } from "./icons";
+import { setupPanel } from "./panel";
+
+hydrateIcons();
+setupPanel();
 
 const START_VIEW = { center: [LONGITUDE, LATITUDE] as [number, number], zoom: 19, pitch: 60, bearing: -20 };
 
 const map = new maplibregl.Map({
   container: "map",
-  style: {
-    version: 8,
-    sources: {
-      osm: {
-        type: "raster",
-        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-        tileSize: 256,
-        maxzoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }
-    },
-    layers: [{ id: "osm", type: "raster", source: "osm" }]
-  },
+  style: initialStyle(),
   ...START_VIEW,
   maxZoom: 24,
   maxPitch: 85,
   canvasContextAttributes: { antialias: true }
 });
 
+/** Mount an element from index.html as a map control, so it stacks with MapLibre's own. */
+const htmlControl = (id: string): maplibregl.IControl => {
+  const el = document.getElementById(id)!;
+  return { onAdd: () => el, onRemove: () => el.remove() };
+};
+
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+map.addControl(htmlControl("view-ctrl"), "top-right");
+map.addControl(htmlControl("floor-ctrl"), "top-right");
 map.addControl(new maplibregl.ScaleControl(), "bottom-left");
 
 const layer = new ModelLayer("glb-models", `${import.meta.env.BASE_URL}models/`);
@@ -46,6 +51,7 @@ const ROOM_FLOORS: (RoomFloor & { altitude: number })[] = [
 ];
 
 const status = document.getElementById("status")!;
+const viewLabel = document.getElementById("view-label")!;
 const groupList = document.getElementById("groups")!;
 const presetBar = document.getElementById("presets")!;
 const checkboxes = new Map<string, HTMLInputElement>();
@@ -80,32 +86,54 @@ function isGroupVisible(id: string): boolean {
   return checkboxes.get(id)?.checked ?? false;
 }
 
+function showActivePreset(presetId: string | null): void {
+  presetBar.querySelectorAll("button").forEach((b) => {
+    const active = b.dataset.preset === presetId;
+    b.classList.toggle("active", active);
+    b.setAttribute("aria-pressed", String(active));
+  });
+  viewLabel.textContent = PRESETS.find((p) => p.id === presetId)?.label ?? "Custom layers";
+}
+
 function applyPreset(presetId: string): void {
   const preset = PRESETS.find((p) => p.id === presetId);
   if (!preset) return;
-  presetBar.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b.dataset.preset === presetId));
+  showActivePreset(presetId);
   for (const group of GROUPS) void setGroup(group.id, preset.groups.includes(group.id));
 }
 
 for (const preset of PRESETS) {
   const button = document.createElement("button");
-  button.textContent = preset.label;
+  button.type = "button";
+  button.innerHTML = preset.short || icon("building");
+  button.title = preset.label;
+  button.setAttribute("aria-label", preset.label);
   button.dataset.preset = preset.id;
   button.addEventListener("click", () => applyPreset(preset.id));
   presetBar.appendChild(button);
 }
 
 for (const group of GROUPS) {
-  const label = document.createElement("label");
+  const row = document.createElement("label");
+  row.className = "layer-row";
+  const text = document.createElement("span");
+  text.className = "layer-text";
+  const name = document.createElement("span");
+  name.className = "layer-name";
+  name.textContent = group.label;
+  const count = document.createElement("small");
+  count.textContent = `${group.models.length} model${group.models.length === 1 ? "" : "s"}`;
+  text.append(name, count);
   const box = document.createElement("input");
   box.type = "checkbox";
+  box.className = "switch";
   box.addEventListener("change", () => {
-    presetBar.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+    showActivePreset(null);
     void setGroup(group.id, box.checked);
   });
   checkboxes.set(group.id, box);
-  label.append(box, ` ${group.label} (${group.models.length})`);
-  groupList.appendChild(label);
+  row.append(text, box);
+  groupList.appendChild(row);
 }
 
 // --- Rotation controls
@@ -118,7 +146,9 @@ function stopAutoRotate(): void {
   if (autoFrame !== null) cancelAnimationFrame(autoFrame);
   autoFrame = null;
   autoButton.classList.remove("active");
-  autoButton.textContent = "▶ Auto";
+  autoButton.setAttribute("aria-pressed", "false");
+  autoButton.innerHTML = icon("play");
+  autoButton.title = "Spin the view around the map centre";
 }
 
 function startAutoRotate(): void {
@@ -130,7 +160,9 @@ function startAutoRotate(): void {
   };
   autoFrame = requestAnimationFrame(tick);
   autoButton.classList.add("active");
-  autoButton.textContent = "⏸ Stop";
+  autoButton.setAttribute("aria-pressed", "true");
+  autoButton.innerHTML = icon("pause");
+  autoButton.title = "Stop spinning";
 }
 
 function rotateBy(deg: number): void {
@@ -153,6 +185,9 @@ setupDebugPanel(layer, document.getElementById("debug-toggle") as HTMLButtonElem
 
 map.on("load", () => {
   map.addLayer(layer);
+  const solar = new SolarUi(map, layer);
+  // Bottom-left controls stack upwards, so this sits above the scale bar.
+  map.addControl(new BasemapControl(() => solar.tintBasemap()), "bottom-left");
   const navigation = new NavigationUi(map, layer, `${import.meta.env.BASE_URL}data/`, {
     showFloor: (floor) => applyPreset(floor),
     isFloorVisible: isGroupVisible,
@@ -162,12 +197,22 @@ map.on("load", () => {
     }
   });
   navigation.load().catch((error) => console.error("Failed to load navigation data", error));
+  const booking = new BookingUi({
+    floorOf: (room) => ["second", "third"].find((floor) => navigation.canNavigate(room, floor)),
+    focusRoom: (room, floor) => void navigation.focusRoom(room, floor),
+    onChange: () => {
+      if (tintRooms((name) => booking.tintFor(name))) map.triggerRepaint();
+    }
+  });
   setupInteraction(map, layer, {
     canNavigate: (room, groupId) => navigation.canNavigate(room, groupId),
-    onDirections: (which, room, groupId) => navigation.setEndpoint(which, room, groupId)
+    onDirections: (which, room, groupId) => navigation.setEndpoint(which, room, groupId),
+    bookingStatus: (room) => booking.statusFor(room),
+    onBook: (room) => booking.openFor(room)
   });
   for (const rooms of ROOM_FLOORS) {
     loadRooms(layer, rooms, rooms.altitude)
+      .then(() => tintRooms((name) => booking.tintFor(name)))
       .then(() => layer.setOverlayVisible(roomOverlayId(rooms.groupId), rooms.altitude, checkboxes.get(rooms.groupId)?.checked ?? false))
       .catch((error) => console.error(`Failed to load rooms for ${rooms.groupId}`, error));
   }

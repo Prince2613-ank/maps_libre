@@ -1,6 +1,7 @@
 {
   "third": {
-    "east": -1.6,
+    "east": -2.5,
+    "north": 0.5,
     "up": 2.3
   },
   "second": {
@@ -16,7 +17,7 @@
     "scale": 1.07
   },
   "ground": {
-    "east": -2.6
+    "east": -1.9
   },
   "first": {
     "east": -2,

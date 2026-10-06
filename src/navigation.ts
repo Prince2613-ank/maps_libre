@@ -249,6 +249,11 @@ export class Navigator {
     return this.rooms().find((r) => r.floor === floor && normalize(r.roomName) === normalize(roomName));
   }
 
+  /** Centre of a room's shape (raw ENU metres, just above the floor). */
+  roomCenter(room: RoomChoice): THREE.Vector3 | undefined {
+    return this.floors.get(room.floor)?.roomCenters.get(normalize(room.roomName));
+  }
+
   private door(room: RoomChoice, other: RoomChoice): THREE.Vector3 | undefined {
     const name = normalize(room.roomName);
     const alt = NAV_FLOORS[room.floor].altitude + NODE_LIFT;
