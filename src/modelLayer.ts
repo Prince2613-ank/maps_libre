@@ -15,7 +15,82 @@ type ModelEntry = {
   box: THREE.Box3Helper;
   /** Overlays (room shapes etc.) are authored directly in ENU metres, so they skip the Cesium model transform. */
   overlay?: boolean;
+  /** Where most of the model's geometry is (see bulkBounds), computed on first use. */
+  bulk?: THREE.Box3;
 };
+
+/**
+ * Shrink every texture in `scene` larger than `maxSize` pixels before it reaches the GPU. Captured surroundings can
+ * carry textures (8192², many 4096²) that need gigabytes of GPU memory; running out loses the whole WebGL context.
+ */
+function shrinkTextures(scene: THREE.Object3D, maxSize: number): void {
+  const textures = new Set<THREE.Texture>();
+  scene.traverse((child) => {
+    const material = (child as THREE.Mesh).material;
+    for (const m of Array.isArray(material) ? material : material ? [material] : []) {
+      for (const value of Object.values(m)) if (value instanceof THREE.Texture) textures.add(value);
+    }
+  });
+  const originals = new Set<ImageBitmap>();
+  for (const texture of textures) {
+    // Textures sharing an image share one Source, so after the first resize the others already see the small one.
+    const image = texture.image as (CanvasImageSource & { width: number; height: number }) | null;
+    if (!image || Math.max(image.width, image.height) <= maxSize) continue;
+    const scale = maxSize / Math.max(image.width, image.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const context = canvas.getContext("2d")!;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    if (typeof ImageBitmap !== "undefined" && image instanceof ImageBitmap) originals.add(image);
+    texture.image = canvas;
+    texture.needsUpdate = true;
+  }
+  for (const bitmap of originals) bitmap.close(); // free the full-size decoded images
+}
+
+/** Share of each mesh's vertices ignored at each end of each axis, so a few stray vertices don't count. */
+const BULK_OUTLIER_SHARE = 0.01;
+const BULK_SAMPLES_PER_MESH = 20_000;
+/** Meshes centred farther than this from the anchor (the building) are strays, not part of the building. */
+const BULK_MAX_DISTANCE_M = 60;
+
+/**
+ * Box around the parts of a model that are actually at the building, in ENU metres around the anchor: vertices are
+ * taken in `scene`'s own space (as when it was loaded) and mapped by `toEnu`. Some exported floors carry stray
+ * objects far away (the ground floor file has a large plant ~350 m up in the sky), which makes their plain bounding
+ * box — and so the adjustment pivot — useless.
+ */
+function bulkBounds(scene: THREE.Object3D, toEnu: THREE.Matrix4): THREE.Box3 {
+  scene.updateMatrixWorld(true);
+  const parentInverse = scene.parent ? scene.parent.matrixWorld.clone().invert() : new THREE.Matrix4();
+  const v = new THREE.Vector3();
+  const toTarget = new THREE.Matrix4();
+  const meshBoxes: THREE.Box3[] = [];
+  scene.traverse((child) => {
+    const position = (child as THREE.Mesh).isMesh ? (child as THREE.Mesh).geometry.getAttribute("position") : undefined;
+    if (!position?.count) return;
+    toTarget.multiplyMatrices(toEnu, parentInverse).multiply(child.matrixWorld);
+    const stride = Math.max(1, Math.ceil(position.count / BULK_SAMPLES_PER_MESH));
+    const axes: number[][] = [[], [], []];
+    for (let i = 0; i < position.count; i += stride) {
+      v.fromBufferAttribute(position, i).applyMatrix4(toTarget);
+      axes[0].push(v.x);
+      axes[1].push(v.y);
+      axes[2].push(v.z);
+    }
+    const box = new THREE.Box3();
+    axes.forEach((values, axis) => {
+      values.sort((a, b) => a - b);
+      box.min.setComponent(axis, values[Math.round(BULK_OUTLIER_SHARE * (values.length - 1))]);
+      box.max.setComponent(axis, values[Math.round((1 - BULK_OUTLIER_SHARE) * (values.length - 1))]);
+    });
+    meshBoxes.push(box);
+  });
+  const nearby = meshBoxes.filter((box) => box.getCenter(v).length() <= BULK_MAX_DISTANCE_M);
+  return (nearby.length ? nearby : meshBoxes).reduce((all, box) => all.union(box), new THREE.Box3());
+}
 
 /** Sun & sky lighting for the models (see setLighting). */
 export type Lighting = {
@@ -70,6 +145,7 @@ export class ModelLayer implements CustomLayerInterface {
   private readonly objects = new Map<string, ModelEntry>();
   private readonly pending = new Map<string, Promise<ModelEntry>>();
   private readonly sets = new Map<string, ModelSet>();
+  private readonly textureLimits = new Map<string, number>();
   private highlighted = new Set<string>();
   private readonly mercatorAnchor: maplibregl.MercatorCoordinate;
   private readonly afterRender = new Set<() => void>();
@@ -165,6 +241,11 @@ export class ModelLayer implements CustomLayerInterface {
 
   isVisible(file: string, altitude: number): boolean {
     return this.objects.get(`${file}@${altitude}`)?.root.visible ?? false;
+  }
+
+  /** Load this file's textures at no more than `size` pixels (call before the file loads). */
+  limitTextureSize(file: string, size: number): void {
+    this.textureLimits.set(file, size);
   }
 
   /** Declare models that are adjusted together with setSetAdjustment. */
@@ -294,6 +375,19 @@ export class ModelLayer implements CustomLayerInterface {
   }
 
   /**
+   * For editing a set's adjustment: the point its rotation/scale pivots on, and the box around the bulk of its main
+   * model (ENU metres, at its altitude, before the adjustment). Null until the main model has loaded.
+   */
+  setGeometry(id: string): { pivot: THREE.Vector3; bounds: THREE.Box3 } | null {
+    const set = this.sets.get(id);
+    const entry = set && [...this.objects.values()].find((e) => e.file === set.pivotFile && !e.overlay);
+    if (!entry) return null;
+    // The scene inside root is in model space; enuModel takes it to ENU metres like `center`.
+    entry.bulk ??= bulkBounds(entry.root.children[0], this.enuModel).translate(new THREE.Vector3(0, 0, entry.altitude));
+    return { pivot: entry.center.clone().setZ(entry.center.z + entry.altitude), bounds: entry.bulk.clone() };
+  }
+
+  /**
    * Current adjustment of a set as an ENU-metre matrix (identity for unknown sets), so other code can move
    * its own geometry (e.g. a navigation route) exactly like that set's models. Load the set's pivot model first.
    */
@@ -314,6 +408,8 @@ export class ModelLayer implements CustomLayerInterface {
     if (pending) return pending;
 
     const promise = this.loader.loadAsync(this.baseUrl + encodeURIComponent(file)).then((gltf) => {
+      const textureLimit = this.textureLimits.get(file);
+      if (textureLimit) shrinkTextures(gltf.scene, textureLimit);
       gltf.scene.updateMatrixWorld(true);
       const bounds = new THREE.Box3().setFromObject(gltf.scene);
       const box = new THREE.Box3Helper(bounds, 0xff00ff);

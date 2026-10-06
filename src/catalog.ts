@@ -1,6 +1,7 @@
 import { ALT_1ST, ALT_2ND, ALT_3RD, ALT_GROUND, BASE_ALT } from "./placement";
 
-export type ModelRef = { file: string; altitude: number };
+/** `maxTextureSize`: load the file's textures at no more than this many pixels (for very large textures). */
+export type ModelRef = { file: string; altitude: number; maxTextureSize?: number };
 
 export type ModelGroup = {
   id: string;
@@ -15,6 +16,10 @@ const at = (altitude: number, files: string[]): ModelRef[] => files.map((file) =
 // Each floor layer includes that floor's cameras and chairs.
 export const GROUPS: ModelGroup[] = [
   { id: "building", label: "Building exterior", models: at(BASE_ALT, ["Building_model.glb"]) },
+  // Captured surroundings; Cesium shows it together with the exterior. The file is optimized (one copy of the
+  // capture, WebP textures ≤ 2048², Meshopt); the texture limit guards against re-exports with 8192² textures,
+  // which need ~1.9 GB of GPU memory and lose the WebGL context on many machines.
+  { id: "outdoor", label: "Outdoor area", models: [{ file: "outdoor_model.glb", altitude: BASE_ALT, maxTextureSize: 2048 }] },
   { id: "ground", label: "Ground floor", models: at(ALT_GROUND, ["ground_floor_final.glb"]) },
   { id: "first", label: "1st floor", models: at(ALT_1ST, ["1st_floor_up_final.glb"]) },
   {
@@ -47,7 +52,7 @@ export type Preset = { id: string; label: string; short: string; groups: string[
 
 // Bottom (outside) to top, as the floor switcher stacks them.
 export const PRESETS: Preset[] = [
-  { id: "building", label: "Building exterior", short: "", groups: ["building"] },
+  { id: "building", label: "Building exterior", short: "", groups: ["building", "outdoor"] },
   { id: "ground", label: "Ground floor", short: "G", groups: ["ground"] },
   { id: "first", label: "1st floor", short: "1", groups: ["first"] },
   { id: "second", label: "2nd floor", short: "2", groups: ["second"] },

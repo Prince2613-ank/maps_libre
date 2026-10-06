@@ -1,26 +1,37 @@
 {
   "third": {
-    "east": -2.5,
-    "north": 0.5,
-    "up": 2.3
+    "east": -2.502,
+    "north": 0.4,
+    "up": 2.271,
+    "scale": 0.99
   },
   "second": {
-    "east": -2.1,
+    "east": -2.098,
     "north": 0.2,
-    "up": 1.2,
+    "up": 1.174,
     "yaw": 5,
-    "pitch": -1
+    "pitch": -1,
+    "scale": 0.99
   },
   "building": {
-    "up": 3.2,
+    "east": 0.291,
+    "north": -0.061,
+    "up": 4.016,
     "yaw": 9,
-    "scale": 1.07
+    "pitch": 2,
+    "roll": 1,
+    "scale": 1.15
   },
   "ground": {
-    "east": -1.9
+    "east": -20.524,
+    "north": 10.364,
+    "up": -57.88,
+    "scale": 0.68
   },
   "first": {
-    "east": -2,
-    "up": 0.4
+    "east": -4.66,
+    "north": 1.635,
+    "up": -8.8,
+    "scale": 0.95
   }
 }

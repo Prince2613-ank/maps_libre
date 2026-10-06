@@ -1,6 +1,7 @@
+import * as THREE from "three";
 import { GROUPS } from "./catalog";
 import type { ModelLayer } from "./modelLayer";
-import { ADJUSTMENTS, NO_ADJUSTMENT, savedAdjustment, type Adjustment } from "./adjustments";
+import { ADJUSTMENTS, NO_ADJUSTMENT, adjustmentMatrix, savedAdjustment, type Adjustment } from "./adjustments";
 
 const DRAFT_KEY = "maplibre-indoor:layer-adjustments";
 const MOVE_STEPS = [0.01, 0.05, 0.1, 0.5, 1, 5];
@@ -155,7 +156,12 @@ export function setupDebugPanel(layer: ModelLayer, toggle: HTMLButtonElement): v
     input.addEventListener("input", () => {
       const value = Number(input.value);
       if (input.value === "" || !Number.isFinite(value)) return;
-      apply({ ...current(), [field.key]: value }, false);
+      const before = current();
+      const next = { ...before, [field.key]: value };
+      const moving = field.key === "east" || field.key === "north" || field.key === "up";
+      const adj = moving ? next : keepInPlace(before, next);
+      apply(adj, false); // don't rewrite the field being typed in…
+      if (!moving) for (const key of ["east", "north", "up"] as const) inputs.get(key)!.value = String(adj[key]); // …but show the shift
     });
     grid.append(label, input);
     inputs.set(field.key, input);
@@ -196,13 +202,29 @@ export function setupDebugPanel(layer: ModelLayer, toggle: HTMLButtonElement): v
   const adjustmentOf = (id: string) => adjustments.get(id) ?? savedAdjustment(id);
   const current = () => adjustmentOf(select.value);
 
+  /**
+   * After a rotation or scale change, shift the layer so it turns about its visual centre and grows/shrinks from
+   * its base (staying on its floor level), whatever point the saved adjustment pivots on. The stored pivot is the
+   * main model's bounding-box centre, which stray geometry in some files puts far from the model itself.
+   */
+  function keepInPlace(before: Adjustment, after: Adjustment): Adjustment {
+    const geometry = layer.setGeometry(select.value);
+    if (!geometry) return after; // main model not loaded yet: plain change
+    const anchor = geometry.bounds.getCenter(new THREE.Vector3());
+    if (after.scale !== before.scale) anchor.z = geometry.bounds.min.z;
+    const was = anchor.clone().applyMatrix4(adjustmentMatrix(before, geometry.pivot));
+    const now = anchor.clone().applyMatrix4(adjustmentMatrix(after, geometry.pivot));
+    return { ...after, east: round(after.east + was.x - now.x), north: round(after.north + was.y - now.y), up: round(after.up + was.z - now.z) };
+  }
+
   function applyNudge(nudge: Nudge): void {
     const step = nudge.step === "move" ? Number(moveStep.value) : nudge.step === "turn" ? Number(turnStep.value) : SCALE_STEP;
     const adj = current();
     let value = round(adj[nudge.key] + nudge.sign * step);
     if (nudge.key === "scale") value = Math.max(0.01, value);
     else if (nudge.step === "turn") value = round(((((value + 180) % 360) + 360) % 360) - 180); // keep within -180..180
-    apply({ ...adj, [nudge.key]: value });
+    const next = { ...adj, [nudge.key]: value };
+    apply(nudge.step === "move" ? next : keepInPlace(adj, next));
   }
 
   function apply(adj: Adjustment, updateInputs = true): void {
