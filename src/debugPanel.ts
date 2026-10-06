@@ -1,5 +1,7 @@
+import type * as maplibregl from "maplibre-gl";
 import * as THREE from "three";
 import { GROUPS } from "./catalog";
+import { setupGeojsonEditor, type GeojsonEditorHooks } from "./geojsonEditor";
 import type { ModelLayer } from "./modelLayer";
 import { ADJUSTMENTS, NO_ADJUSTMENT, adjustmentMatrix, savedAdjustment, type Adjustment } from "./adjustments";
 
@@ -81,11 +83,12 @@ function stepSelect(steps: number[], unit: string, initial: number): HTMLSelectE
 }
 
 /**
- * Debug panel: move, rotate and scale each panel layer (Building exterior, Ground, 1st, 2nd, 3rd) as one piece,
- * then Save to src/adjustments.json through the dev server. Unsaved edits are kept in this browser as a draft.
+ * Debug panel. "3D layers": move, rotate and scale each panel layer (Building exterior, Ground, 1st, 2nd, 3rd) as
+ * one piece, then Save to src/adjustments.json through the dev server; unsaved edits are kept in this browser as a
+ * draft. "GeoJSON": edit the data files' corners on the map (geojsonEditor.ts).
  * Opened with the "Debug" button or by loading the page with ?debug.
  */
-export function setupDebugPanel(layer: ModelLayer, toggle: HTMLButtonElement): void {
+export function setupDebugPanel(layer: ModelLayer, toggle: HTMLButtonElement, map: maplibregl.Map, hooks: GeojsonEditorHooks): void {
   const layerFiles = new Map(GROUPS.map((g) => [g.id, g.models.map((m) => m.file)]));
   for (const group of GROUPS) layer.defineSet(group.id, layerFiles.get(group.id)!, group.models[0].file);
 
@@ -97,7 +100,15 @@ export function setupDebugPanel(layer: ModelLayer, toggle: HTMLButtonElement): v
   const panel = document.createElement("div");
   panel.id = "debug";
   panel.hidden = true;
-  panel.innerHTML = `<h2>Adjust layer</h2>`;
+  panel.innerHTML = `
+    <div class="segmented debug-tabs">
+      <button type="button" data-debug-tab="layers">3D layers</button>
+      <button type="button" data-debug-tab="geojson">GeoJSON</button>
+    </div>`;
+  const layersPane = document.createElement("div");
+  const geojsonPane = document.createElement("div");
+  geojsonPane.hidden = true;
+  let tab: "layers" | "geojson" = "layers";
 
   const select = document.createElement("select");
   for (const group of GROUPS) {
@@ -196,8 +207,10 @@ export function setupDebugPanel(layer: ModelLayer, toggle: HTMLButtonElement): v
   const status = document.createElement("div");
   status.className = "debug-status";
 
-  panel.append(select, readout, section("Move", moveStep), pad, section("Rotate / scale", turnStep), turns, fine, actions, status);
+  layersPane.append(select, readout, section("Move", moveStep), pad, section("Rotate / scale", turnStep), turns, fine, actions, status);
+  panel.append(layersPane, geojsonPane);
   document.body.appendChild(panel);
+  const geojson = setupGeojsonEditor(geojsonPane, map, layer, hooks);
 
   const adjustmentOf = (id: string) => adjustments.get(id) ?? savedAdjustment(id);
   const current = () => adjustmentOf(select.value);
@@ -275,7 +288,8 @@ export function setupDebugPanel(layer: ModelLayer, toggle: HTMLButtonElement): v
     const adj = current();
     for (const [key, input] of inputs) input.value = String(adj[key]);
     updateState();
-    layer.setHighlight(panel.hidden ? [] : layerFiles.get(select.value)!);
+    layer.setHighlight(panel.hidden || tab !== "layers" ? [] : layerFiles.get(select.value)!);
+    geojson.setActive(!panel.hidden && tab === "geojson");
   }
 
   select.addEventListener("change", refresh);
@@ -284,7 +298,7 @@ export function setupDebugPanel(layer: ModelLayer, toggle: HTMLButtonElement): v
   window.addEventListener(
     "keydown",
     (event) => {
-      if (panel.hidden || event.ctrlKey || event.altKey || event.metaKey) return;
+      if (panel.hidden || tab !== "layers" || event.ctrlKey || event.altKey || event.metaKey) return;
       if ((event.target as HTMLElement).closest("input, select, textarea")) return;
       if (event.key === "S" && event.shiftKey) {
         event.preventDefault();
@@ -306,5 +320,16 @@ export function setupDebugPanel(layer: ModelLayer, toggle: HTMLButtonElement): v
     refresh();
   }
   toggle.addEventListener("click", () => setOpen(panel.hidden === true));
+
+  const tabButtons = [...panel.querySelectorAll<HTMLButtonElement>("[data-debug-tab]")];
+  function showTab(next: typeof tab): void {
+    tab = next;
+    layersPane.hidden = tab !== "layers";
+    geojsonPane.hidden = tab !== "geojson";
+    for (const b of tabButtons) b.classList.toggle("active", b.dataset.debugTab === tab);
+    refresh();
+  }
+  for (const b of tabButtons) b.addEventListener("click", () => showTab(b.dataset.debugTab as typeof tab));
+  showTab("layers");
   setOpen(new URLSearchParams(location.search).has("debug"));
 }

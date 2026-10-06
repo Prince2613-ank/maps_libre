@@ -70,3 +70,12 @@ export function enuToLonLat(east: number, north: number): [number, number] {
   const rad = THREE.MathUtils.radToDeg;
   return [LONGITUDE + rad(east / ((a / k.east) * Math.cos(deg(LATITUDE)))), LATITUDE + rad(north / (a / k.north))];
 }
+
+/** Top-level key of a GeoJSON data file: metres to raise (or, negative, lower) everything in it. Set with Debug → GeoJSON. */
+export const GEOJSON_HEIGHT_KEY = "height_offset";
+
+/** A GeoJSON data file's height offset in metres (0 when it has none). */
+export function geojsonHeight(data: unknown): number {
+  const value = Number((data as Record<string, unknown> | null)?.[GEOJSON_HEIGHT_KEY]);
+  return Number.isFinite(value) ? value : 0;
+}

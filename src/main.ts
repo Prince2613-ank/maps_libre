@@ -18,6 +18,7 @@ import { PLACE } from "./place";
 import { renderPlaceCard } from "./placeCard";
 import { setupSearch } from "./search";
 import { NAV_FLOORS, type FloorId } from "./navigation";
+import { OutdoorNavigationUi } from "./outdoorNavUi";
 
 renderPlaceCard(document.getElementById("place-card")!, PLACE, { lat: LATITUDE, lon: LONGITUDE });
 hydrateIcons();
@@ -185,7 +186,7 @@ document.getElementById("rotate-reset")!.addEventListener("click", () => {
 // Grabbing the map stops the auto spin so it doesn't fight the user.
 for (const type of ["mousedown", "touchstart", "wheel"] as const) map.getCanvas().addEventListener(type, stopAutoRotate);
 
-setupDebugPanel(layer, document.getElementById("debug-toggle") as HTMLButtonElement);
+setupDebugPanel(layer, document.getElementById("debug-toggle") as HTMLButtonElement, map, { showFloor: (preset) => applyPreset(preset) });
 
 map.on("load", () => {
   map.addLayer(layer);
@@ -200,7 +201,32 @@ map.on("load", () => {
       if (main) await layer.preload(main.file, main.altitude);
     }
   });
-  navigation.load().catch((error) => console.error("Failed to load navigation data", error));
+  // Navigate tab: "Inside the building" (room to room) or "From outside" (any place to the entrance, then inside).
+  const setNavMode = (mode: "indoor" | "outdoor") => {
+    document.querySelectorAll<HTMLButtonElement>("[data-nav-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.navMode === mode)));
+    document.getElementById("nav-indoor")!.hidden = mode !== "indoor";
+    document.getElementById("nav-outdoor")!.hidden = mode !== "outdoor";
+  };
+  document.querySelectorAll<HTMLButtonElement>("[data-nav-mode]").forEach((b) =>
+    b.addEventListener("click", () => setNavMode(b.dataset.navMode as "indoor" | "outdoor"))
+  );
+  const outdoor = new OutdoorNavigationUi(map, layer, `${import.meta.env.BASE_URL}data/outdoor_navigation_points.geojson`, {
+    showOutside: () => applyPreset("building"),
+    stopIndoor: () => navigation.exit(),
+    startIndoor: (room) => {
+      setNavMode("indoor");
+      // The outdoor route ends at the entrance on the 2nd floor (cesium_demo/src/buildingPOI.ts).
+      if (room.floor === "second" && room.roomName.toLowerCase() === "entrance") return;
+      navigation.setEndpoint("from", "Entrance", "second");
+      navigation.setEndpoint("to", room.roomName, room.floor);
+      void navigation.start();
+    }
+  });
+  if (import.meta.env.DEV) Object.assign((window as any).indoor, { navigation, outdoor });
+  navigation
+    .load()
+    .then(() => outdoor.setRooms(navigation.roomList()))
+    .catch((error) => console.error("Failed to load navigation data", error));
   const booking = new BookingUi({
     floorOf: (room) => ["second", "third"].find((floor) => navigation.canNavigate(room, floor)),
     focusRoom: (room, floor) => void navigation.focusRoom(room, floor),

@@ -61,6 +61,11 @@
 
         <details id="nav-section" class="tab-panel" role="tabpanel">
           <summary>Navigate</summary>
+          <div class="segmented nav-mode" role="group" aria-label="Where are you starting?">
+            <button type="button" data-nav-mode="indoor" aria-pressed="true"><span data-icon="building"></span> Inside the building</button>
+            <button type="button" data-nav-mode="outdoor" aria-pressed="false"><span data-icon="globe"></span> From outside</button>
+          </div>
+          <div id="nav-indoor">
           <div class="route-card">
             <div class="route-rail" aria-hidden="true"><span class="rail-from"></span><span class="rail-line"></span><span class="rail-to" data-icon="pin"></span></div>
             <div class="route-fields">
@@ -78,6 +83,37 @@
           <div id="nav-message" class="hint"></div>
           <div id="nav-summary" hidden></div>
           <ol id="nav-steps"></ol>
+          </div>
+
+          <div id="nav-outdoor" hidden>
+            <div class="route-card">
+              <div class="route-rail" aria-hidden="true"><span class="rail-from"></span><span class="rail-line"></span><span class="rail-to" data-icon="pin"></span></div>
+              <div class="route-fields">
+                <label class="field"><span>From</span>
+                  <span class="input-row">
+                    <input id="out-from" type="text" list="out-from-list" placeholder="Address, place or lat,lng" autocomplete="off" />
+                    <button id="out-locate" class="icon-btn" type="button" title="Start from my location" aria-label="Start from my location"><span data-icon="navigation"></span></button>
+                  </span>
+                  <datalist id="out-from-list"></datalist>
+                </label>
+                <label class="field"><span>To</span><select id="out-to"></select></label>
+              </div>
+            </div>
+            <div class="segmented travel-mode" role="group" aria-label="Travel mode">
+              <button type="button" data-travel="walk" aria-pressed="true">🚶 Walk</button>
+              <button type="button" data-travel="drive" aria-pressed="false">🚗 Drive</button>
+            </div>
+            <div class="nav-actions">
+              <button id="out-show" class="btn" type="button"><span data-icon="route"></span> Show route</button>
+              <button id="out-start" class="btn primary" type="button"><span data-icon="navigation"></span> Start</button>
+              <button id="out-pause" class="btn" type="button" hidden>⏸ Pause</button>
+              <button id="out-exit" class="btn" type="button" hidden>Exit</button>
+              <label class="switch-label nav-follow"><input type="checkbox" id="out-follow" class="switch" checked /> Follow</label>
+            </div>
+            <div id="out-message" class="hint"></div>
+            <div id="out-summary" class="route-summary" hidden></div>
+            <ol id="out-steps" class="route-steps"></ol>
+          </div>
         </details>
 
         <details id="booking-section" class="tab-panel" role="tabpanel">

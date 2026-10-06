@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { ALT_2ND, ALT_3RD, lonLatToEnu } from "./placement";
+import { ALT_2ND, ALT_3RD, geojsonHeight, lonLatToEnu } from "./placement";
 
 // Room-to-room routing, ported from the Cesium app (cesium_demo/src/navigation.ts):
 // - corridor centre-line points per floor, each linked to its 4 nearest neighbours within 8 m, Dijkstra between them
@@ -58,6 +58,8 @@ export type NavRoute = {
 
 type FloorData = {
   graph: GraphNode[];
+  /** Height of this floor's door points (floor altitude + lift + the doors file's height offset). */
+  doorAltitude: number;
   doors: Map<string, THREE.Vector3>;
   roomCenters: Map<string, THREE.Vector3>;
   roomNames: string[];
@@ -202,14 +204,18 @@ export class Navigator {
           fetchJson(this.dataUrl + info.rooms)
         ]);
 
+        // Each file may raise/lower its points (Debug → GeoJSON → Up/Down).
+        const corridorAlt = nodeAlt + geojsonHeight(corridor);
+        const doorAltitude = nodeAlt + geojsonHeight(doors);
+        const roomAlt = nodeAlt + geojsonHeight(rooms);
         const graph = buildGraph(
-          corridor.features.filter((f: any) => f.geometry?.type === "Point").map((f: any) => at(f.geometry.coordinates, nodeAlt))
+          corridor.features.filter((f: any) => f.geometry?.type === "Point").map((f: any) => at(f.geometry.coordinates, corridorAlt))
         );
 
         const doorMap = new Map<string, THREE.Vector3>();
         for (const f of doors.features) {
           // Rooms with two doors keep the last one, like Cesium (Pantry's doors are special-cased in door()).
-          if (f.geometry?.type === "Point") doorMap.set(normalize(f.properties.room_name), at(f.geometry.coordinates, nodeAlt));
+          if (f.geometry?.type === "Point") doorMap.set(normalize(f.properties.room_name), at(f.geometry.coordinates, doorAltitude));
         }
 
         const centers = new Map<string, THREE.Vector3>();
@@ -221,11 +227,11 @@ export class Navigator {
           if (centers.has(normalize(name))) continue;
           const coords: [number, number][] = (f.geometry.type === "MultiPolygon" ? f.geometry.coordinates.flat(2) : f.geometry.coordinates.flat(1));
           const box = new THREE.Box3();
-          for (const c of coords) box.expandByPoint(at(c, nodeAlt));
+          for (const c of coords) box.expandByPoint(at(c, roomAlt));
           centers.set(normalize(name), box.getCenter(new THREE.Vector3()));
         }
 
-        this.floors.set(floor, { graph, doors: doorMap, roomCenters: centers, roomNames: names });
+        this.floors.set(floor, { graph, doorAltitude, doors: doorMap, roomCenters: centers, roomNames: names });
       })
     );
   }
@@ -256,7 +262,7 @@ export class Navigator {
 
   private door(room: RoomChoice, other: RoomChoice): THREE.Vector3 | undefined {
     const name = normalize(room.roomName);
-    const alt = NAV_FLOORS[room.floor].altitude + NODE_LIFT;
+    const alt = this.floors.get(room.floor)?.doorAltitude ?? NAV_FLOORS[room.floor].altitude + NODE_LIFT;
     if (name === "pantry" && room.floor === "second") return at(SECOND_FLOOR_PANTRY_EMPLOYEE_SIDE_DOOR, alt);
     if (name === "pantry" && room.floor === "third") {
       // Cross-floor routes use the Pantry door near the conference room; same-floor routes the lower door.

@@ -304,14 +304,9 @@ export class ModelLayer implements CustomLayerInterface {
    * pickable, so filter them out and chairs/rooms can be clicked through walls seen from above.
    */
   pick(x: number, y: number, filter: (file: string) => boolean): PickHit | null {
-    if (!this.map) return null;
-    const canvas = this.map.getCanvas();
-    const ndcX = (x / canvas.clientWidth) * 2 - 1;
-    const ndcY = -(y / canvas.clientHeight) * 2 + 1;
-    const inverse = this.camera.projectionMatrixInverse;
-    const near = new THREE.Vector3(ndcX, ndcY, -1).applyMatrix4(inverse);
-    const far = new THREE.Vector3(ndcX, ndcY, 1).applyMatrix4(inverse);
-    const raycaster = new THREE.Raycaster(near, far.clone().sub(near).normalize());
+    const ray = this.screenRay(x, y);
+    if (!ray) return null;
+    const raycaster = new THREE.Raycaster(ray.origin, ray.direction);
     raycaster.params.Line = { threshold: 0 };
 
     const roots = [...this.objects.values()].filter((e) => e.root.visible && filter(e.file));
@@ -321,6 +316,23 @@ export class ModelLayer implements CustomLayerInterface {
     const hit = hits[0];
     const entry = roots.find((e) => isDescendant(hit.object, e.root))!;
     return { file: entry.file, object: hit.object, point: hit.point.clone() };
+  }
+
+  /** The view ray (three.js world space) under a screen point in CSS pixels relative to the map canvas. */
+  screenRay(x: number, y: number): THREE.Ray | null {
+    if (!this.map) return null;
+    const canvas = this.map.getCanvas();
+    const ndcX = (x / canvas.clientWidth) * 2 - 1;
+    const ndcY = -(y / canvas.clientHeight) * 2 + 1;
+    const inverse = this.camera.projectionMatrixInverse;
+    const near = new THREE.Vector3(ndcX, ndcY, -1).applyMatrix4(inverse);
+    const far = new THREE.Vector3(ndcX, ndcY, 1).applyMatrix4(inverse);
+    return new THREE.Ray(near, far.sub(near).normalize());
+  }
+
+  /** Local → three.js world matrix of an overlay added with addOverlay (includes its set's adjustment). */
+  overlayMatrix(file: string, altitude: number): THREE.Matrix4 | null {
+    return this.objects.get(`${file}@${altitude}`)?.root.matrix.clone() ?? null;
   }
 
   /** Screen position (CSS pixels) of a three.js world point, or null when it is behind the camera. */

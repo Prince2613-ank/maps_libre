@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { ModelLayer } from "./modelLayer";
-import { lonLatToEnu } from "./placement";
+import { geojsonHeight, lonLatToEnu } from "./placement";
 
 // Room polygons from the Cesium app (cesium_demo/*_room1.geojson), drawn at the floor height like cesium_demo/src/rooms.ts.
 
@@ -88,6 +88,7 @@ export async function loadRooms(layer: ModelLayer, floor: RoomFloor, altitude: n
   const geojson = await response.json();
 
   const group = new THREE.Group();
+  group.position.z = geojsonHeight(geojson);
   for (const feature of geojson.features) {
     const props = feature.properties ?? {};
     const name: string = props.room_name ?? "Room";
