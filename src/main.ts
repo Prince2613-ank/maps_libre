@@ -14,7 +14,12 @@ import { tintRooms } from "./rooms";
 import { BasemapControl, initialStyle } from "./basemaps";
 import { hydrateIcons, icon } from "./icons";
 import { setupPanel } from "./panel";
+import { PLACE } from "./place";
+import { renderPlaceCard } from "./placeCard";
+import { setupSearch } from "./search";
+import { NAV_FLOORS, type FloorId } from "./navigation";
 
+renderPlaceCard(document.getElementById("place-card")!, PLACE, { lat: LATITUDE, lon: LONGITUDE });
 hydrateIcons();
 setupPanel();
 
@@ -51,7 +56,6 @@ const ROOM_FLOORS: (RoomFloor & { altitude: number })[] = [
 ];
 
 const status = document.getElementById("status")!;
-const viewLabel = document.getElementById("view-label")!;
 const groupList = document.getElementById("groups")!;
 const presetBar = document.getElementById("presets")!;
 const checkboxes = new Map<string, HTMLInputElement>();
@@ -92,7 +96,6 @@ function showActivePreset(presetId: string | null): void {
     b.classList.toggle("active", active);
     b.setAttribute("aria-pressed", String(active));
   });
-  viewLabel.textContent = PRESETS.find((p) => p.id === presetId)?.label ?? "Custom layers";
 }
 
 function applyPreset(presetId: string): void {
@@ -203,6 +206,13 @@ map.on("load", () => {
     onChange: () => {
       if (tintRooms((name) => booking.tintFor(name))) map.triggerRepaint();
     }
+  });
+  setupSearch({
+    rooms: () => navigation.roomList(),
+    floorLabel: (floor) => NAV_FLOORS[floor as FloorId]?.label ?? floor,
+    bookingStatus: (room) => booking.statusFor(room),
+    focus: (room) => void navigation.focusRoom(room.roomName, room.floor),
+    routeTo: (room) => navigation.setEndpoint("to", room.roomName, room.floor)
   });
   setupInteraction(map, layer, {
     canNavigate: (room, groupId) => navigation.canNavigate(room, groupId),

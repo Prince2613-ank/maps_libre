@@ -120,6 +120,11 @@ export class NavigationUi {
     this.updateButtons();
   }
 
+  /** Every room you can navigate to (empty until load() finishes). */
+  roomList(): readonly RoomChoice[] {
+    return this.rooms;
+  }
+
   /** Is this room a navigation destination? (used by the room popup buttons) */
   canNavigate(roomName: string, floor: string): boolean {
     return floor in NAV_FLOORS && Boolean(this.navigator.findRoom(roomName, floor as FloorId));

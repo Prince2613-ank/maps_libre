@@ -27,24 +27,31 @@
 
     <aside id="panel">
       <header class="panel-header">
-        <div class="brand-mark"><span data-icon="building"></span></div>
-        <div class="brand-text">
-          <h1>Indoor Viewer</h1>
-          <p id="status" role="status"></p>
-          <p id="view-label"></p>
+        <div class="search-box">
+          <span class="search-glyph" data-icon="search"></span>
+          <input id="search-input" type="search" placeholder="Search rooms" aria-label="Search rooms" autocomplete="off" />
+          <button id="search-clear" class="icon-btn" type="button" title="Clear search" aria-label="Clear search" hidden><span data-icon="close"></span></button>
         </div>
         <button id="debug-toggle" class="icon-btn" type="button" title="Move, rotate and scale each layer (or open with ?debug)" aria-label="Debug: adjust layers"><span data-icon="wrench"></span></button>
         <button id="panel-collapse" class="icon-btn collapse-btn" type="button" title="Collapse panel" aria-expanded="true"><span data-icon="chevron"></span></button>
       </header>
+      <p id="status" role="status"></p>
+      <div id="search-results" hidden></div>
 
       <nav class="tabs" role="tablist" aria-label="Panel sections">
+        <button class="tab" type="button" role="tab" data-tab="overview-section"><span data-icon="info"></span><span>Overview</span></button>
         <button class="tab" type="button" role="tab" data-tab="layers-section"><span data-icon="layers"></span><span>Layers</span></button>
-        <button class="tab" type="button" role="tab" data-tab="nav-section"><span data-icon="route"></span><span>Directions</span></button>
+        <button class="tab" type="button" role="tab" data-tab="nav-section"><span data-icon="route"></span><span>Navigate</span></button>
         <button class="tab" type="button" role="tab" data-tab="booking-section"><span data-icon="calendar"></span><span>Booking</span></button>
         <button class="tab" type="button" role="tab" data-tab="sun-section"><span data-icon="sun"></span><span>Sun</span></button>
       </nav>
 
       <div class="panel-body">
+        <details id="overview-section" class="tab-panel" role="tabpanel">
+          <summary>Overview</summary>
+          <div id="place-card"></div>
+        </details>
+
         <details id="layers-section" class="tab-panel" role="tabpanel">
           <summary>Layers</summary>
           <h2 class="section-title">3D models</h2>
@@ -53,7 +60,7 @@
         </details>
 
         <details id="nav-section" class="tab-panel" role="tabpanel">
-          <summary>Directions</summary>
+          <summary>Navigate</summary>
           <div class="route-card">
             <div class="route-rail" aria-hidden="true"><span class="rail-from"></span><span class="rail-line"></span><span class="rail-to" data-icon="pin"></span></div>
             <div class="route-fields">
