@@ -88,5 +88,7 @@ export default defineConfig({
   plugins: [saveAdjustments(), saveGeojson()],
   // maplibre-gl v6 loads its web worker relative to its own module URL,
   // which breaks if Vite pre-bundles it into node_modules/.vite/deps.
-  optimizeDeps: { exclude: ["maplibre-gl"] }
+  optimizeDeps: { exclude: ["maplibre-gl"] },
+  // MapLibre starts its worker as a module worker (main.ts sets its URL), so build workers as ES modules.
+  worker: { format: "es" }
 });

@@ -1,4 +1,5 @@
 import * as maplibregl from "maplibre-gl";
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./style.css";
 import { GROUPS, PRESETS } from "./catalog";
@@ -19,6 +20,10 @@ import { renderPlaceCard } from "./placeCard";
 import { setupSearch } from "./search";
 import { NAV_FLOORS, type FloorId } from "./navigation";
 import { OutdoorNavigationUi } from "./outdoorNavUi";
+
+// maplibre-gl v6 looks for its worker file next to its own script, which isn't there once Vite bundles it
+// (404 → "Worker failed to load" in production). Vite bundles the worker with its shared code instead.
+maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
 renderPlaceCard(document.getElementById("place-card")!, PLACE, { lat: LATITUDE, lon: LONGITUDE });
 hydrateIcons();
