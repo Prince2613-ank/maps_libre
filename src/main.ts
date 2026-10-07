@@ -29,7 +29,9 @@ renderPlaceCard(document.getElementById("place-card")!, PLACE, { lat: LATITUDE, 
 hydrateIcons();
 setupPanel();
 
-const START_VIEW = { center: [LONGITUDE, LATITUDE] as [number, number], zoom: 19, pitch: 60, bearing: -20 };
+// Default view: the building exterior with the outdoor area around it. Used at start, by the reset button and
+// whenever the exterior view is chosen from the floor switcher.
+const START_VIEW = { center: [LONGITUDE, LATITUDE] as [number, number], zoom: 18.3, pitch: 55, bearing: -20 };
 
 const map = new maplibregl.Map({
   container: "map",
@@ -108,11 +110,17 @@ function showActivePreset(presetId: string | null): void {
   });
 }
 
+// Only the building exterior and the outdoor area can be shown together; a floor is always shown on its own.
+const SHOWN_TOGETHER = new Set(["building", "outdoor"]);
+// True while a preset button is being clicked (as opposed to code switching floors), so only a click moves the camera.
+let userPreset = false;
+
 function applyPreset(presetId: string): void {
   const preset = PRESETS.find((p) => p.id === presetId);
   if (!preset) return;
   showActivePreset(presetId);
   for (const group of GROUPS) void setGroup(group.id, preset.groups.includes(group.id));
+  if (presetId === "building" && userPreset) map.easeTo({ ...START_VIEW, duration: 800 });
 }
 
 for (const preset of PRESETS) {
@@ -122,7 +130,11 @@ for (const preset of PRESETS) {
   button.title = preset.label;
   button.setAttribute("aria-label", preset.label);
   button.dataset.preset = preset.id;
-  button.addEventListener("click", () => applyPreset(preset.id));
+  button.addEventListener("click", () => {
+    userPreset = true;
+    applyPreset(preset.id);
+    userPreset = false;
+  });
   presetBar.appendChild(button);
 }
 
@@ -141,11 +153,15 @@ for (const group of GROUPS) {
   box.type = "checkbox";
   box.className = "switch";
   box.addEventListener("change", () => {
-    // One layer at a time: switching one on switches the others off, and the floor switcher follows.
+    // One layer at a time, except the building exterior and the outdoor area, which can be on together.
     if (box.checked) {
-      for (const other of GROUPS) if (other.id !== group.id && isGroupVisible(other.id)) void setGroup(other.id, false);
+      for (const other of GROUPS) {
+        const together = SHOWN_TOGETHER.has(group.id) && SHOWN_TOGETHER.has(other.id);
+        if (other.id !== group.id && !together && isGroupVisible(other.id)) void setGroup(other.id, false);
+      }
     }
-    const preset = box.checked ? PRESETS.find((p) => p.groups.length === 1 && p.groups[0] === group.id) : undefined;
+    const shown = GROUPS.filter((g) => (g.id === group.id ? box.checked : isGroupVisible(g.id))).map((g) => g.id);
+    const preset = PRESETS.find((p) => p.groups.length === shown.length && p.groups.every((id) => shown.includes(id)));
     showActivePreset(preset?.id ?? null);
     void setGroup(group.id, box.checked);
   });
