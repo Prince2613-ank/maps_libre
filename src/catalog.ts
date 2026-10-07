@@ -57,6 +57,5 @@ export const PRESETS: Preset[] = [
   { id: "ground", label: "Ground floor", short: "G", groups: ["ground"] },
   { id: "first", label: "1st floor", short: "1", groups: ["first"] },
   { id: "second", label: "2nd floor", short: "2", groups: ["second"] },
-  { id: "third", label: "3rd floor", short: "3", groups: ["third"] },
-  { id: "all", label: "All floors", short: "All", groups: ["ground", "first", "second", "third"] }
+  { id: "third", label: "3rd floor", short: "3", groups: ["third"] }
 ];

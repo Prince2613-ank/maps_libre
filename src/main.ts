@@ -138,7 +138,12 @@ for (const group of GROUPS) {
   box.type = "checkbox";
   box.className = "switch";
   box.addEventListener("change", () => {
-    showActivePreset(null);
+    // One layer at a time: switching one on switches the others off, and the floor switcher follows.
+    if (box.checked) {
+      for (const other of GROUPS) if (other.id !== group.id && isGroupVisible(other.id)) void setGroup(other.id, false);
+    }
+    const preset = box.checked ? PRESETS.find((p) => p.groups.length === 1 && p.groups[0] === group.id) : undefined;
+    showActivePreset(preset?.id ?? null);
     void setGroup(group.id, box.checked);
   });
   checkboxes.set(group.id, box);
