@@ -50,6 +50,9 @@ const round = (value: number) => Math.round(value * 1000) / 1000;
 const same = (a: Adjustment, b: Adjustment) => FIELDS.every(({ key }) => a[key] === b[key]);
 
 function loadDraft(): Record<string, Adjustment> {
+  // Drafts are a dev-server convenience (Save only works there). The published site always shows the committed
+  // placement in src/adjustments.json, whatever a browser has stored from earlier debugging.
+  if (!import.meta.env.DEV) return {};
   try {
     return JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "{}");
   } catch {
