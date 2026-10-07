@@ -52,7 +52,10 @@ map.addControl(htmlControl("floor-ctrl"), "top-right");
 map.addControl(new maplibregl.ScaleControl(), "bottom-left");
 
 const layer = new ModelLayer("glb-models", `${import.meta.env.BASE_URL}models/`);
-for (const { file, maxTextureSize } of GROUPS.flatMap((g) => g.models)) if (maxTextureSize) layer.limitTextureSize(file, maxTextureSize);
+for (const { file, maxTextureSize, doubleSided } of GROUPS.flatMap((g) => g.models)) {
+  if (maxTextureSize) layer.limitTextureSize(file, maxTextureSize);
+  if (doubleSided) layer.setDoubleSided(file);
+}
 // Handy for poking at the scene from the browser console during development.
 if (import.meta.env.DEV) Object.assign(window, { indoor: { map, layer } });
 

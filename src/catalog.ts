@@ -1,7 +1,10 @@
 import { ALT_1ST, ALT_2ND, ALT_3RD, ALT_GROUND, BASE_ALT } from "./placement";
 
-/** `maxTextureSize`: load the file's textures at no more than this many pixels (for very large textures). */
-export type ModelRef = { file: string; altitude: number; maxTextureSize?: number };
+/**
+ * `maxTextureSize`: load the file's textures at no more than this many pixels (for very large textures).
+ * `doubleSided`: draw both faces of every triangle (captured meshes whose faces come out inside-out here).
+ */
+export type ModelRef = { file: string; altitude: number; maxTextureSize?: number; doubleSided?: boolean };
 
 export type ModelGroup = {
   id: string;
@@ -19,7 +22,7 @@ export const GROUPS: ModelGroup[] = [
   // Captured surroundings (off by default; Cesium shows it with the exterior). The file is optimized (one copy of the
   // capture, WebP textures ≤ 2048², Meshopt); the texture limit guards against re-exports with 8192² textures,
   // which need ~1.9 GB of GPU memory and lose the WebGL context on many machines.
-  { id: "outdoor", label: "Outdoor area", models: [{ file: "outdoor_model.glb", altitude: BASE_ALT, maxTextureSize: 2048 }] },
+  { id: "outdoor", label: "Outdoor area", models: [{ file: "outdoor_model.glb", altitude: BASE_ALT, maxTextureSize: 2048, doubleSided: true }] },
   { id: "ground", label: "Ground floor", models: at(ALT_GROUND, ["ground_floor_final.glb"]) },
   { id: "first", label: "1st floor", models: at(ALT_1ST, ["1st_floor_up_final.glb"]) },
   {

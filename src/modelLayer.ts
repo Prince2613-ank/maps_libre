@@ -149,6 +149,7 @@ export class ModelLayer implements CustomLayerInterface {
   private readonly pending = new Map<string, Promise<ModelEntry>>();
   private readonly sets = new Map<string, ModelSet>();
   private readonly textureLimits = new Map<string, number>();
+  private readonly doubleSided = new Set<string>();
   private highlighted = new Set<string>();
   private readonly mercatorAnchor: maplibregl.MercatorCoordinate;
   private readonly afterRender = new Set<() => void>();
@@ -249,6 +250,11 @@ export class ModelLayer implements CustomLayerInterface {
   /** Load this file's textures at no more than `size` pixels (call before the file loads). */
   limitTextureSize(file: string, size: number): void {
     this.textureLimits.set(file, size);
+  }
+
+  /** Draw both faces of this file's triangles (call before the file loads). */
+  setDoubleSided(file: string): void {
+    this.doubleSided.add(file);
   }
 
   /** Declare models that are adjusted together with setSetAdjustment. */
@@ -425,6 +431,12 @@ export class ModelLayer implements CustomLayerInterface {
     const promise = this.loader.loadAsync(this.baseUrl + encodeURIComponent(file)).then((gltf) => {
       const textureLimit = this.textureLimits.get(file);
       if (textureLimit) shrinkTextures(gltf.scene, textureLimit);
+      if (this.doubleSided.has(file)) {
+        gltf.scene.traverse((child) => {
+          const material = (child as THREE.Mesh).material;
+          for (const m of Array.isArray(material) ? material : material ? [material] : []) m.side = THREE.DoubleSide;
+        });
+      }
       gltf.scene.updateMatrixWorld(true);
       const bounds = new THREE.Box3().setFromObject(gltf.scene);
       const box = new THREE.Box3Helper(bounds, 0xff00ff);
