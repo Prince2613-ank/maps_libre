@@ -39,5 +39,8 @@
     "yaw": 3.235,
     "pitch": 1,
     "scale": 0.979
+  },
+  "outdoor": {
+    "yaw": 2
   }
 }

@@ -24,8 +24,8 @@ const FILES: EditFile[] = [
   { file: "3rd_floor_room1.geojson", label: "3rd floor · room shapes", set: "third", altitude: ALT_3RD, preset: "third" },
   { file: "3rd_floor_corridor.geojson", label: "3rd floor · corridor points", set: "third", altitude: ALT_3RD, preset: "third" },
   { file: "door_3rd.geojson", label: "3rd floor · doors", set: "third", altitude: ALT_3RD, preset: "third" },
-  // Outdoor navigation draws these at ground level, with no layer adjustment (outdoorNavUi.ts).
-  { file: "outdoor_navigation_points.geojson", label: "Outdoor path points", set: null, altitude: 0, preset: "building" }
+  // Outdoor navigation draws these with the Outdoor area layer's adjustment, at ground level (outdoorNavUi.ts).
+  { file: "outdoor_navigation_points.geojson", label: "Outdoor path points", set: "outdoor", altitude: 0, preset: "building" }
 ];
 
 const LIFT = 0.12; // m above the floor, just over the room shapes (5 cm) and nav points (10 cm)
