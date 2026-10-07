@@ -1,8 +1,8 @@
 {
   "third": {
-    "east": -2.502,
-    "north": 0.4,
-    "up": 2.271,
+    "east": -2.402,
+    "north": 0.1,
+    "up": 2.671,
     "scale": 0.99
   },
   "second": {
@@ -14,25 +14,32 @@
     "scale": 0.99
   },
   "building": {
-    "east": 0.291,
-    "north": -0.061,
-    "up": 4.016,
-    "yaw": 9,
+    "east": 0.095,
+    "north": 0.313,
+    "up": 4.269,
+    "yaw": 8.514,
     "pitch": 2,
     "roll": 1,
-    "scale": 1.15
+    "scale": 1.173
   },
   "ground": {
-    "east": -11.838,
-    "north": 1.7,
-    "up": -25.053,
-    "yaw": -3.712,
-    "scale": 0.86
+    "east": -3.739,
+    "north": 10.768,
+    "up": -18.228,
+    "yaw": 4.372,
+    "pitch": -1,
+    "roll": 1,
+    "scale": 0.896
   },
   "first": {
-    "east": -4.66,
-    "north": 1.635,
-    "up": -8.8,
-    "scale": 0.95
+    "east": -2.731,
+    "north": 0.409,
+    "up": 0.797,
+    "yaw": 3.235,
+    "pitch": 1,
+    "scale": 0.979
+  },
+  "outdoor": {
+    "yaw": 2
   }
 }
