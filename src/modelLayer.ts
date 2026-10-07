@@ -109,6 +109,9 @@ export type Lighting = {
   groundShadowOpacity: number;
 };
 
+/** Metalness cap, so metallic surfaces stay lit without an environment map. */
+const MAX_METALNESS = 0.2;
+
 /** Half-size (m) of the square area around the building where sun shadows are computed. */
 const SHADOW_EXTENT = 70;
 const SHADOW_MAP_SIZE = 4096;
@@ -434,7 +437,14 @@ export class ModelLayer implements CustomLayerInterface {
       root.add(gltf.scene, box);
       root.traverse((child) => {
         child.frustumCulled = false; // projection is MapLibre's, three's culling can't trust it
-        if ((child as THREE.Mesh).isMesh) child.castShadow = child.receiveShadow = true;
+        if (!(child as THREE.Mesh).isMesh) return;
+        child.castShadow = child.receiveShadow = true;
+        // The scene has no environment map, so fully metallic materials (no diffuse reflection) render pure black.
+        const material = (child as THREE.Mesh).material;
+        for (const m of Array.isArray(material) ? material : [material]) {
+          const standard = m as THREE.MeshStandardMaterial;
+          if (standard.isMeshStandardMaterial && standard.metalness > MAX_METALNESS) standard.metalness = MAX_METALNESS;
+        }
       });
       root.visible = false;
       const center = bounds.getCenter(new THREE.Vector3()).applyMatrix4(this.enuModel);

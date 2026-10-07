@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { GROUPS } from "./catalog";
 import { setupGeojsonEditor, type GeojsonEditorHooks } from "./geojsonEditor";
 import type { ModelLayer } from "./modelLayer";
+import { setupCornerAdjust } from "./cornerAdjust";
 import { ADJUSTMENTS, NO_ADJUSTMENT, adjustmentMatrix, savedAdjustment, type Adjustment } from "./adjustments";
 
 const DRAFT_KEY = "maplibre-indoor:layer-adjustments";
@@ -207,13 +208,22 @@ export function setupDebugPanel(layer: ModelLayer, toggle: HTMLButtonElement, ma
   const status = document.createElement("div");
   status.className = "debug-status";
 
-  layersPane.append(select, readout, section("Move", moveStep), pad, section("Rotate / scale", turnStep), turns, fine, actions, status);
+  // --- Corner handles
+  const cornerToggle = document.createElement("label");
+  cornerToggle.className = "geo-linked";
+  cornerToggle.title = "Drag a corner: the opposite corner stays put and the layer turns + scales to follow. Shift-drag moves the layer.";
+  const cornerCheck = Object.assign(document.createElement("input"), { type: "checkbox", checked: true });
+  cornerToggle.append(cornerCheck, " Corner handles on map (Shift-drag moves)");
+  cornerCheck.addEventListener("change", () => corners.setEnabled(cornerCheck.checked));
+
+  layersPane.append(select, readout, cornerToggle, section("Move", moveStep), pad, section("Rotate / scale", turnStep), turns, fine, actions, status);
   panel.append(layersPane, geojsonPane);
   document.body.appendChild(panel);
   const geojson = setupGeojsonEditor(geojsonPane, map, layer, hooks);
 
   const adjustmentOf = (id: string) => adjustments.get(id) ?? savedAdjustment(id);
   const current = () => adjustmentOf(select.value);
+  const corners = setupCornerAdjust(layer, map, { layerId: () => select.value, adjustment: current, apply: (adj) => apply(adj) });
 
   /**
    * After a rotation or scale change, shift the layer so it turns about its visual centre and grows/shrinks from
@@ -246,6 +256,7 @@ export function setupDebugPanel(layer: ModelLayer, toggle: HTMLButtonElement, ma
     storeDraft(adjustments);
     if (updateInputs) refresh();
     else updateState();
+    corners.update();
   }
 
   const unsavedLayers = () => [...layerFiles.keys()].filter((id) => !same(adjustmentOf(id), savedAdjustment(id)));
@@ -290,6 +301,7 @@ export function setupDebugPanel(layer: ModelLayer, toggle: HTMLButtonElement, ma
     updateState();
     layer.setHighlight(panel.hidden || tab !== "layers" ? [] : layerFiles.get(select.value)!);
     geojson.setActive(!panel.hidden && tab === "geojson");
+    corners.setShown(!panel.hidden && tab === "layers");
   }
 
   select.addEventListener("change", refresh);

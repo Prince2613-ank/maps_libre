@@ -41,8 +41,8 @@ export const GROUPS: ModelGroup[] = [
       // cameras
       "3rd_cc1.glb", "3rd_cc2.glb", "3rd_cc3.glb", "3rd_cc4.glb", "3rd_cc5.glb",
       "3rd_cc6.glb", "3rd_cc6 (1).glb", "3rd_cc_meeting_room.glb", "3rd_cc8.glb",
-      // chairs
-      ...range(34).map((i) => `${i}.glb`)
+      // chairs (32 removed)
+      ...range(34).filter((i) => i !== 32).map((i) => `${i}.glb`)
     ])
   }
 ];
