@@ -701,15 +701,12 @@ input.switch:checked::after { transform: translateX(14px); }
 .brand-word { height: 30px; width: auto; }
 .topbar-title {
   padding-left: 16px;
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: 0.01em;
-  color: #1e4fa3;
-  background: linear-gradient(90deg, #1e3a8a, #2563eb 55%, #38a3ff);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  border-left: 2px solid rgba(30, 79, 163, 0.35);
+  color: #0f2a63;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 8px rgba(255, 255, 255, 0.8);
+  border-left: 2px solid rgba(15, 42, 99, 0.35);
   white-space: nowrap;
 }
 .topbar-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; pointer-events: auto; }
