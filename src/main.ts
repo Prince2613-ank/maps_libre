@@ -31,7 +31,7 @@ setupPanel();
 
 // Default view: the building exterior with the outdoor area around it. Used at start, by the reset button and
 // whenever the exterior view is chosen from the floor switcher.
-const START_VIEW = { center: [LONGITUDE, LATITUDE] as [number, number], zoom: 18.3, pitch: 55, bearing: -20 };
+const START_VIEW = { center: [77.133735, 28.67104] as [number, number], zoom: 18.3, pitch: 25, bearing: 27 };
 
 const map = new maplibregl.Map({
   container: "map",
