@@ -139,6 +139,8 @@ export class SolarUi {
     const daytime = today.sunrise !== null && today.sunset !== null && now.minutes > today.sunrise && now.minutes < today.sunset;
     this.timeInput.value = String(daytime ? now.minutes : 600);
 
+    // Real sunlight starts off (the browser may otherwise restore the switch from a previous visit).
+    this.enabled.checked = false;
     this.enabled.addEventListener("change", () => this.update());
     this.dateInput.addEventListener("change", () => this.update());
     this.timeInput.addEventListener("input", () => this.update());
