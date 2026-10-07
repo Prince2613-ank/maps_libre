@@ -7,7 +7,7 @@ const PHONE = window.matchMedia("(max-width: 640px)");
 // What each tab is for, shown as a short tip when someone clicks it.
 const TIPS: Record<string, { title: string; text: string }> = {
   "overview-section": { title: "Overview", text: "See the place at a glance: its details, rooms and how busy it is. Click a room to see more." },
-  "layers-section": { title: "Layers", text: "Turn parts of the 3D model on or off: building exterior, outdoor area and each floor, with its chairs and cameras." },
+  "layers-section": { title: "Layers", text: "Turn parts of the 3D model on or off: building exterior and each floor, with its chairs and cameras." },
   "nav-section": { title: "Navigate", text: "Get directions. Pick a start and a destination room to draw the walking route across floors, or find a route from outside." },
   "booking-section": { title: "Booking", text: "Check meeting-room availability and see each room's upcoming bookings from the calendar." },
   "sun-section": { title: "Sun", text: "Light the building with the real sun for any date and time, with shadows, the sun's path and a day / night map." }

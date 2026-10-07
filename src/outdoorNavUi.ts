@@ -35,7 +35,7 @@ const FOOTPATH_SPEED = 2.2; // m/s on the footpath near the building
 const HANDOVER_MS = 1600;
 
 export type OutdoorHooks = {
-  /** Show the building exterior + outdoor area. */
+  /** Show the building exterior. */
   showOutside: () => void;
   /** Stop any indoor navigation that is running. */
   stopIndoor: () => void;
@@ -281,10 +281,10 @@ export class OutdoorNavigationUi {
     source?.setData({ type: "FeatureCollection", features: [feature("route", points), ...(walked.length > 1 ? [feature("walked", walked)] : [])] });
   }
 
-  /** Lon/lat → where it is drawn in 3D (follows the outdoor area's saved adjustment, like the indoor route). */
+  /** Lon/lat → where it is drawn in 3D (follows the map, like the indoor route). */
   private toScene(p: LonLat, lift = DOT_LIFT): THREE.Vector3 {
     const e = lonLatToEnu(p.lon, p.lat);
-    return new THREE.Vector3(e.x, e.y, lift + this.router.heightOffset).applyMatrix4(this.layer.setTransform("outdoor"));
+    return new THREE.Vector3(e.x, e.y, lift + this.router.heightOffset);
   }
 
   private draw(route: OutdoorRoute, start: LonLat): void {
