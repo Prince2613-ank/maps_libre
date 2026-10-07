@@ -5,7 +5,7 @@ const TAB_KEY = "indoor.panel-tab";
 const PHONE = window.matchMedia("(max-width: 640px)");
 
 // What each tab is for, shown as a short tip when someone clicks it.
-const TIPS: Record<string, { title: string; text: string }> = {
+export const TIPS: Record<string, { title: string; text: string }> = {
   "overview-section": { title: "Overview", text: "See the place at a glance: its details, rooms and how busy it is. Click a room to see more." },
   "layers-section": { title: "Layers", text: "Turn parts of the 3D model on or off: building exterior, outdoor area and each floor, with its chairs and cameras." },
   "nav-section": { title: "Navigate", text: "Get directions. Pick a start and a destination room to draw the walking route across floors, or find a route from outside." },
@@ -13,10 +13,27 @@ const TIPS: Record<string, { title: string; text: string }> = {
   "sun-section": { title: "Sun", text: "Light the building with the real sun for any date and time, with shadows, the sun's path and a day / night map." }
 };
 const TIP_SECONDS = 7;
+const TIPS_KEY = "indoor.tab-tips";
+
+export function tipsEnabled(): boolean {
+  try {
+    return localStorage.getItem(TIPS_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+export function setTipsEnabled(on: boolean): void {
+  try {
+    localStorage.setItem(TIPS_KEY, on ? "on" : "off");
+  } catch {
+    // Remembering the choice is only a convenience.
+  }
+}
 
 function showTip(id: string): void {
   const tip = TIPS[id];
-  if (!tip) return;
+  if (!tip || !tipsEnabled()) return;
   let el = document.getElementById("tab-tip");
   if (!el) {
     el = document.createElement("div");

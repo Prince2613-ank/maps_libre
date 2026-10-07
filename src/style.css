@@ -25,6 +25,7 @@
   --shadow: 0 12px 32px -10px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(15, 23, 42, 0.08);
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.1), 0 3px 10px rgba(15, 23, 42, 0.1);
   --panel-w: 344px;
+  --bar-h: 56px;
   --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -164,13 +165,13 @@ input.switch:checked::after { transform: translateX(14px); }
    ========================================================================== */
 #panel {
   position: absolute;
-  top: 12px;
+  top: calc(var(--bar-h) + 12px);
   left: 12px;
   z-index: 3;
   display: flex;
   flex-direction: column;
   width: var(--panel-w);
-  max-height: calc(100vh - 24px);
+  max-height: calc(100vh - var(--bar-h) - 24px);
   box-sizing: border-box;
   overflow: hidden;
   font-size: 13px;
@@ -418,6 +419,7 @@ input.switch:checked::after { transform: translateX(14px); }
 .maplibregl-ctrl-group { border-radius: var(--radius) !important; box-shadow: var(--shadow-sm) !important; overflow: hidden; }
 .maplibregl-ctrl-group button { width: 34px !important; height: 34px !important; }
 .maplibregl-ctrl-group button + button { border-top-color: var(--line) !important; }
+.maplibregl-ctrl-top-right { top: var(--bar-h); }
 .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 12px 12px 0 0; }
 .maplibregl-ctrl-top-right .maplibregl-ctrl + .maplibregl-ctrl { margin-top: 8px; }
 .view-ctrl button { display: grid !important; place-items: center; color: var(--text-2); }
@@ -475,12 +477,12 @@ input.switch:checked::after { transform: translateX(14px); }
    ========================================================================== */
 #booking-card {
   position: absolute;
-  top: 12px;
+  top: calc(var(--bar-h) + 12px);
   left: calc(var(--panel-w) + 24px);
   z-index: 3;
   width: 300px;
   max-width: calc(100vw - 24px);
-  max-height: calc(100vh - 24px);
+  max-height: calc(100vh - var(--bar-h) - 24px);
   box-sizing: border-box;
   overflow-y: auto;
   padding: 14px 16px 16px;
@@ -550,7 +552,7 @@ input.switch:checked::after { transform: translateX(14px); }
 
 #nav-hud {
   position: absolute;
-  top: 12px;
+  top: calc(var(--bar-h) + 12px);
   left: 50%;
   z-index: 4;
   display: flex;
@@ -591,7 +593,7 @@ input.switch:checked::after { transform: translateX(14px); }
   z-index: 3;
   width: 290px;
   max-width: calc(100vw - 24px);
-  max-height: calc(100vh - 160px);
+  max-height: calc(100vh - var(--bar-h) - 160px);
   box-sizing: border-box;
   overflow-y: auto;
   padding: 12px 14px;
@@ -633,7 +635,7 @@ input.switch:checked::after { transform: translateX(14px); }
   #panel.collapsed .tabs { display: grid; margin-bottom: 12px; }
   .maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right { bottom: var(--panel-h, 0px); }
   #booking-card { top: auto; right: 8px; bottom: 8px; left: 8px; z-index: 6; width: auto; max-height: 78vh; }
-  #nav-hud { top: 8px; right: 60px; left: 8px; min-width: 0; transform: none; }
+  #nav-hud { top: calc(var(--bar-h) + 8px); right: 60px; left: 8px; min-width: 0; transform: none; }
   #debug { right: 8px; bottom: calc(var(--panel-h, 0px) + 8px); left: 8px; width: auto; max-height: 45vh; }
   #toasts { bottom: calc(var(--panel-h, 0px) + 12px); }
 }
@@ -662,7 +664,7 @@ input.switch:checked::after { transform: translateX(14px); }
 
 /* Tip shown when a panel tab is clicked: what the tab is for. */
 #tab-tip {
-  position: fixed; top: 16px; left: calc(var(--panel-w) + 48px); right: 80px; margin: 0 auto; width: fit-content; max-width: 560px;
+  position: fixed; top: calc(var(--bar-h) + 12px); left: calc(var(--panel-w) + 48px); right: 80px; margin: 0 auto; width: fit-content; max-width: 560px;
   z-index: 20; display: flex; flex-direction: column; gap: 2px; padding: 10px 16px; font: 13px/1.4 var(--font); color: var(--text);
   background: var(--ui-solid); border: 1px solid var(--line-strong); border-left: 4px solid var(--accent); border-radius: var(--radius);
   box-shadow: var(--shadow); cursor: pointer; opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity 0.2s, transform 0.2s;
@@ -671,3 +673,106 @@ input.switch:checked::after { transform: translateX(14px); }
 #tab-tip strong { font-size: 14px; }
 #tab-tip span { color: var(--muted); }
 @media (max-width: 640px) { #tab-tip { left: 12px; right: 12px; } }
+
+/* ==========================================================================
+   Top bar: brand on the left, shortcuts on the right
+   ========================================================================== */
+#topbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: var(--bar-h);
+  box-sizing: border-box;
+  padding: 0 12px 0 16px;
+  background: var(--ui-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 2px 10px -4px rgba(15, 23, 42, 0.2);
+  font-family: var(--font);
+}
+.brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+.brand-mark { width: 34px; height: 34px; flex: none; }
+.brand-text { display: flex; flex-direction: column; line-height: 1; }
+.brand-text strong { font-size: 19px; font-weight: 800; letter-spacing: 0.01em; color: #1e4fa3; }
+.brand-text small { margin-top: 3px; font-size: 8.5px; font-weight: 600; letter-spacing: 0.32em; color: #1e4fa3; }
+.topbar-title { padding-left: 14px; font-size: 13px; font-weight: 500; color: var(--muted); border-left: 1px solid var(--line-strong); }
+.topbar-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.tb-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--text-2);
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.tb-btn:hover, .tb-btn[aria-expanded="true"] { color: var(--text); background: var(--ui-hover); }
+.tb-btn.tb-avatar { margin-left: 4px; color: #fff; background: var(--accent); border-radius: 50%; }
+.tb-btn.tb-avatar:hover, .tb-btn.tb-avatar[aria-expanded="true"] { color: #fff; background: var(--accent-hover); }
+.tb-btn .icon { width: 18px; height: 18px; }
+
+.tb-menu {
+  position: fixed;
+  top: calc(var(--bar-h) + 6px);
+  right: 12px;
+  z-index: 8;
+  width: 270px;
+  box-sizing: border-box;
+  padding: 8px;
+  font: 13px/1.4 var(--font);
+  color: var(--text);
+  background: var(--ui-solid);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.tb-menu h3 { margin: 6px 8px 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.tb-menu :is(label, a, button) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.tb-menu :is(label, a, button):hover { background: var(--ui-hover); }
+.tb-menu small { display: block; color: var(--muted); font-size: 11.5px; }
+.tb-menu hr { margin: 6px 0; border: 0; border-top: 1px solid var(--line); }
+.tb-menu .tb-user { display: flex; align-items: center; gap: 10px; padding: 8px; }
+.tb-menu .tb-user .tb-badge { display: grid; flex: none; place-items: center; width: 38px; height: 38px; color: #fff; background: var(--accent); border-radius: 50%; }
+
+.help-backdrop { position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; padding: 16px; background: rgba(15, 23, 42, 0.45); }
+.help-dialog { width: 520px; max-width: 100%; max-height: calc(100vh - 32px); box-sizing: border-box; overflow-y: auto; padding: 20px 22px; font: 13.5px/1.5 var(--font); color: var(--text); background: var(--ui-solid); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+.help-dialog h2 { margin: 0 0 4px; font-size: 18px; }
+.help-dialog h3 { margin: 18px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.help-dialog p { margin: 0; color: var(--text-2); }
+.help-dialog dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; }
+.help-dialog dt { font-weight: 600; }
+.help-dialog dd { margin: 0; color: var(--text-2); }
+.help-dialog .help-close { display: block; margin: 18px 0 0 auto; padding: 7px 16px; font: inherit; font-weight: 600; color: #fff; background: var(--accent); border: 0; border-radius: var(--radius-sm); cursor: pointer; }
+
+@media (max-width: 640px) {
+  :root { --bar-h: 50px; }
+  .topbar-title { display: none; }
+  .brand-text strong { font-size: 16px; }
+  #tab-tip { top: calc(var(--bar-h) + 8px); }
+}

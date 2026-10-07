@@ -15,6 +15,7 @@ import { tintRooms } from "./rooms";
 import { BasemapControl, initialStyle } from "./basemaps";
 import { hydrateIcons, icon } from "./icons";
 import { setupPanel } from "./panel";
+import { setupTopBar } from "./topBar";
 import { PLACE } from "./place";
 import { renderPlaceCard } from "./placeCard";
 import { setupSearch } from "./search";
@@ -28,6 +29,7 @@ maplibregl.setWorkerUrl(maplibreWorkerUrl);
 renderPlaceCard(document.getElementById("place-card")!, PLACE, { lat: LATITUDE, lon: LONGITUDE });
 hydrateIcons();
 setupPanel();
+setupTopBar();
 
 // Default view: the building exterior with the outdoor area around it. Used at start, by the reset button and
 // whenever the exterior view is chosen from the floor switcher.
